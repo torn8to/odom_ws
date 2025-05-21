@@ -1,0 +1,6 @@
+[submodule "src/kindr_ros"]
+	path = src/kindr_ros
+	url = https://github.com/ANYbotics/kindr_ros.git
+[submodule "src/trailblazer_description_ros2"]
+	path = src/trailblazer_description_ros2
+	url = https://github.com/torn8to/trailblazer_description_ros2.git

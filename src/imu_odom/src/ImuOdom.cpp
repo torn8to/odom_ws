@@ -1,9 +1,4 @@
 #include "imu_odom/ImuOdom.hpp"
-
-#include <memory>
-#include <geometry_msgs/msg/transform_stamped.hpp>
-#include <rclcpp/time.hpp>
-
 namespace imu_odom
 {
 
@@ -32,75 +27,82 @@ ImuOdom::ImuOdom(const rclcpp::NodeOptions & options)
   RCLCPP_INFO(get_logger(), "IMU Odometry node initialized");
 }
 
-void ImuOdom::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg)
-{
+void ImuOdom::imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg){
+  // assumes that orientation is not provided in the IMU msg
+  imu_buffer_.push_back(*msg);
+  if (imu_buffer_.size() > imu_buffer_size_) {
+    imu_buffer_.pop_front();
+  }
+  integrateImu(msg);
+  publishOdomMessage(msg->header.stamp);
+}
+
+void ImuOdom::integrateImu(const sensor_msgs::msg::Imu::SharedPtr msg){
   rclcpp::Time current_time = msg->header.stamp;
   
-  if (first_message_) {
+  if (has_first_message_) {
     last_time_ = current_time;
-    first_message_ = false;
+    has_first_message_ = false;
     return;
   }
-
+  Vector3 linear_acceleration;
+  AngularVelocity angular_velocity;
+  tf2::fromMsg(msg->linear_acceleration, linear_acceleration);
+  tf2::fromMsg(msg->angular_velocity, angular_velocity);
   // Calculate time difference
   double dt = (current_time - last_time_).nanoseconds() * 1e-9;  // Convert nanoseconds to seconds
+  const AngularVelocity processed_angular_velocity = angular_velocity
+                                              - angular_velocity_bias_;
+  // Calculate delta rotation from angular velocity
+  const AngularVelocity delta_angle = dt *(processed_angular_velocity + rotation_velocity_);
+  const Rotation delta_half_rotation = Rotation::exponentialMap(delta_angle.toImplementation()/2.0);
+  
+  transform_.getRotation() = transform_.getRotation() * delta_half_rotation;
+  const Vector3 linear_velocity_delta = dt * (linear_acceleration
+             - linear_acceleration_bias_ +
+             transform_.getRotation().invert().rotate(gravity_bias_));
+
+  transform_.getPosition() = transform_.getPosition() + 
+            static_cast<Position>(transform_.getRotation().rotate(
+            linear_velocity_ + (0.5 * linear_velocity_delta)));
+
+  linear_velocity_ = linear_velocity_ + linear_velocity_delta;
+
+  transform_.getRotation() = transform_.getRotation() * delta_half_rotation;
+
   last_time_ = current_time;
+}
 
-  // Update orientation from IMU quaternion
-  orientation_x_ = msg->orientation.x;
-  orientation_y_ = msg->orientation.y;
-  orientation_z_ = msg->orientation.z;
-  orientation_w_ = msg->orientation.w;
-
-  // Integrate linear acceleration to get velocity
-  // Note: This is a simple integration method. For better results, you might want to
-  // implement a more sophisticated algorithm that accounts for gravity and bias
-  vel_x_ += msg->linear_acceleration.x * dt;
-  vel_y_ += msg->linear_acceleration.y * dt;
-  vel_z_ += msg->linear_acceleration.z * dt;
-
-  // Integrate velocity to get position
-  pos_x_ += vel_x_ * dt;
-  pos_y_ += vel_y_ * dt;
-  pos_z_ += vel_z_ * dt;
-
-  // Create and publish odometry message
+void ImuOdom::publishOdomMessage(const rclcpp::Time& current_time) {
   auto odom_msg = nav_msgs::msg::Odometry();
   odom_msg.header.stamp = current_time;
   odom_msg.header.frame_id = frame_id_;
   odom_msg.child_frame_id = child_frame_id_;
 
-  // Set position
-  odom_msg.pose.pose.position.x = pos_x_;
-  odom_msg.pose.pose.position.y = pos_y_;
-  odom_msg.pose.pose.position.z = pos_z_;
+  // Convert transform position to odometry message
+  const auto& position = transform_.getPosition();
+  odom_msg.pose.pose.position.x = position.x();
+  odom_msg.pose.pose.position.y = position.y();
+  odom_msg.pose.pose.position.z = position.z();
 
-  // Set orientation
-  odom_msg.pose.pose.orientation = msg->orientation;
-
-  // Set velocity
-  odom_msg.twist.twist.linear.x = vel_x_;
-  odom_msg.twist.twist.linear.y = vel_y_;
-  odom_msg.twist.twist.linear.z = vel_z_;
-  odom_msg.twist.twist.angular = msg->angular_velocity;
-
+  // Convert transform rotation to odometry message
+  kindr_ros::convertToRosGeometryMsg(transform_, odom_msg.pose.pose);
+  kindr_ros::convertToRosGeometryMsg(linear_velocity_,odom_msg.twist.twist.linear);
+  kindr_ros::convertToRosGeometryMsg(rotation_velocity_,odom_msg.twist.twist.angular);
+  // Set velocities
   // Publish odometry message
   odom_pub_->publish(odom_msg);
-
   // Broadcast transform
-  geometry_msgs::msg::TransformStamped transform;
-  transform.header.stamp = current_time;
-  transform.header.frame_id = frame_id_;
-  transform.child_frame_id = child_frame_id_;
+  geometry_msgs::msg::TransformStamped tf_msg;
 
-  transform.transform.translation.x = pos_x_;
-  transform.transform.translation.y = pos_y_;
-  transform.transform.translation.z = pos_z_;
+  tf_msg.header.stamp = current_time;
+  tf_msg.header.frame_id = frame_id_;
+  tf_msg.child_frame_id = child_frame_id_;
 
-  transform.transform.rotation = msg->orientation;
-
-  tf_broadcaster_->sendTransform(transform);
+  kindr_ros::convertToRosGeometryMsg(transform_, tf_msg.transform);
+  tf_broadcaster_->sendTransform(tf_msg);
 }
+
 
 }  // namespace imu_odom
 
