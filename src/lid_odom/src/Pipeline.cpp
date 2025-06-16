@@ -1,6 +1,8 @@
 #include "Pipeline.hpp"
 #include "VoxelUtils.hpp"
 
+#include <rclcpp/rclcpp.hpp>
+
 namespace cloud {
 
 Pipeline::Pipeline(const PipelineConfig &config)
@@ -22,43 +24,54 @@ Pipeline::~Pipeline() {
   // Cleanup if needed
 }
 
-void Pipeline::update(std::vector<Eigen::Vector3d> &cloud) {
-  // Store the current cloud as the last measurement
-  std::vector<Eigen::Vector3d> cloud_voxel_odom = voxelDownsample(cloud, max_distance_ / voxel_factor_ * voxel_resolution_beta_, 1);
-  std::vector<Eigen::Vector3d> cloud_voxel_mapping = voxelDownsample(cloud, max_distance_ / voxel_factor_ * voxel_resolution_alpha_, 1);
-  // Add points to the map
-  
 
-  addToMap(cloud);
-}
+std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> Pipeline::odometryUpdate(std::vector<Eigen::Vector3d> &cloud){
+  // Create registration object for point cloud alignment down 
+  // sample via odom and downsample via mapping to create
+  // run alignment with odometry downsampling and update via 
+  if(voxel_map_.empty()){
+    std::vector<Eigen::Vector3d> cloud_voxel_mapping = voxelDownsample(cloud,
+   max_distance_ / voxel_factor_ * voxel_resolution_alpha_,1);
+    voxel_map_.addPoints(cloud_voxel_mapping);
 
-Sophus::SE3d Pipeline::odometryUpdate(std::vector<Eigen::Vector3d> &update_cloud, Sophus::SE3d &update_pose) {
-  // Create registration object for point cloud alignment
-  std::vector<Eigen::Vector3d> update_cloud_voxel = voxelDownsample(update_cloud, 
-                             max_distance_ / voxel_factor_ * voxel_resolution_beta_, 
-                             3);
+  return std::make_tuple(position(), cloud_voxel_mapping);
+  }
+  std::vector<Eigen::Vector3d> cloud_voxel_odom = voxelDownsample(cloud,
+   max_distance_ / voxel_factor_ * voxel_resolution_beta_,
+    1);
 
-  
-  // Clear previous odometry voxel map
-  voxel_odom_.clear();
-  
-  // Add current cloud to odometry voxel map
-  voxel_odom_.addPoints(update_cloud);
-  
-  // Perform point cloud registration to align the new cloud with the map
-  Sophus::SE3d result = registration_.alignPointsToMap(
-    update_cloud,
+  std::vector<Eigen::Vector3d> cloud_voxel_mapping = voxelDownsample(cloud,
+   max_distance_ / voxel_factor_ * voxel_resolution_alpha_,
+    1);
+
+  Sophus::SE3d new_position = registration_.alignPointsToMap(
+    cloud_voxel_odom,
     voxel_map_,
-    update_pose,
-    (max_distance_ / voxel_factor_) * 2.0, // Max correspondence distance
-    1.0  // Kernel scale
-  );
-  
-  // Update the current position
-  current_position_ = result;
-  
-  return result;
+    position(),
+    0.1,
+    1.0);
+
+  Sophus::SE3d pose_diff = new_position * current_position_.inverse();
+  RCLCPP_INFO(rclcpp::get_logger("pipeline"), "Position differential: translation=[%f, %f, %f]",
+    pose_diff.translation().x(), pose_diff.translation().y(), pose_diff.translation().z());
+  std::vector<Eigen::Vector3d> cloud_voxel_mapping_transformed = voxel_map_.transform_cloud(cloud_voxel_mapping, new_position);
+  voxel_map_.addPoints(cloud_voxel_mapping_transformed);
+  updatePosition(new_position);
+  return std::make_tuple(new_position, cloud_voxel_mapping);
 }
+
+
+  std::vector<Eigen::Vector3d> Pipeline::removePointsFarFromLocation(const std::vector<Eigen::Vector3d> &cloud,
+                                                                     const Eigen::Vector3d &point){
+    std::vector<Eigen::Vector3d> pruned_points;
+    pruned_points.reserve(cloud.size());
+    for(Eigen::Vector3d cloud_point: cloud){
+      if((cloud_point - point).squaredNorm() <= max_distance_ * max_distance_){
+        pruned_points.push_back(cloud_point);
+      }
+    }
+    return pruned_points;
+  }
 
 void Pipeline::addToMap(const std::vector<Eigen::Vector3d> &points) {
   // Add points to the global map

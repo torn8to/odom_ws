@@ -16,7 +16,7 @@ struct PipelineConfig {
   double voxel_resolution_beta = 0.5; // beta is recommended to be smaller for better odom updates
   bool imu_integration_enabled = false;
   int max_points_per_voxel = 27;
-  int num_threads = 4;
+  int num_threads = 8;
   int num_iterations = 500;
   double convergence = 1e-3;
 };
@@ -35,12 +35,6 @@ public:
   ~Pipeline();
 
   /**
-   * @brief Updates the pipeline with a new point cloud
-   * @param cloud The new point cloud data
-   */
-  void update(std::vector<Eigen::Vector3d> &cloud);
-
-  /**
    * @brief Performs an odometry update using the existing pose
    *
    * This method performs an odometry update using the existing pose and the new cloud.
@@ -51,7 +45,8 @@ public:
    * @param update_pose The current pose of the robot
    * @return The updated pose of the robot
    */
-  Sophus::SE3d odometryUpdate(std::vector<Eigen::Vector3d> &update_cloud, Sophus::SE3d &update_pose);
+  std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> odometryUpdate(std::vector<Eigen::Vector3d> &cloud);
+
 
   /**
    * @brief Adds points to the map
@@ -59,13 +54,23 @@ public:
    */
   void addToMap(const std::vector<Eigen::Vector3d> &points);
 
-
+  /**
+   * @brief prunes points further then the max_distnace stored in the cloud 
+   * @param points a point cloud
+   * @param pouint the point relative to which points are being removed
+   */
+  std::vector<Eigen::Vector3d> removePointsFarFromLocation(const std::vector<Eigen::Vector3d> &cloud,
+                                                            const Eigen::Vector3d &point);
   /**
    * @brief Gets the map points
    * @return Vector of points in the map
    */
   std::vector<Eigen::Vector3d> getMap(){
     return voxel_map_.cloud();
+  }
+
+ inline bool mapEmpty(){
+    return voxel_map_.empty();
   }
 
   /**
@@ -79,7 +84,6 @@ public:
    * @param transformation_matrix The transformation matrix to set as current position
    */
   void updatePosition(const Sophus::SE3d &transformation_matrix);
-
 private:
   Registration registration_;
   Sophus::SE3d current_position_;

@@ -22,7 +22,6 @@ class VoxelMap {
     std::vector<Eigen::Vector3d> transform_cloud(const std::vector<Eigen::Vector3d> &points, const Sophus::SE3d &transform);
     std::vector<Eigen::Vector3d> cloud() const;
     std::tuple<Eigen::Vector3d, double> firstNearestNeighborQuery(const Eigen::Vector3d &point) const;
-    
   private:
     double voxel_resolution_;
     int max_points_per_voxel_;

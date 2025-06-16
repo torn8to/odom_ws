@@ -29,42 +29,40 @@ namespace cloud {
    * @param points The point cloud data to convert to a message
    * @return PointCloud2 message containing the points
    */
-  sensor_msgs::msg::PointCloud2 convertCloudToMsg(const std::vector<Eigen::Vector3d> &points) {
-    sensor_msgs::msg::PointCloud2 msg;
-    msg.height = 1;
-    msg.width = points.size();
-    msg.fields.resize(3);
-    msg.point_step = 12; //3*4
-    msg.row_step = msg.point_step * msg.width;
-    msg.is_bigendian = false;
-    msg.is_dense = true;
-    msg.data.resize(msg.row_step);
+  void convertCloudToMsg(const std::vector<Eigen::Vector3d> &points,
+    sensor_msgs::msg::PointCloud2::SharedPtr &msg) {
+    msg->height = 1;
+    msg->width = points.size();
+    msg->fields.resize(3);
+    msg->point_step = 12; //3*4
+    msg->is_bigendian = false;
+    msg->row_step = msg->point_step * msg->width;
+    msg->is_dense = true;
+    msg->data.resize(msg->row_step);
 
-    msg.fields[0].name = "x";
-    msg.fields[0].offset = 0;
-    msg.fields[0].datatype = sensor_msgs::msg::PointField::FLOAT32;
-    msg.fields[0].count = 1;
+    msg->fields[0].name = "x";
+    msg->fields[0].offset = 0;
+    msg->fields[0].datatype = sensor_msgs::msg::PointField::FLOAT32;
+    msg->fields[0].count = 1;
 
-    msg.fields[1].name = "y";
-    msg.fields[1].offset = 4;
-    msg.fields[1].datatype = sensor_msgs::msg::PointField::FLOAT32;
-    msg.fields[1].count = 1;
+    msg->fields[1].name = "y";
+    msg->fields[1].offset = 4;
+    msg->fields[1].datatype = sensor_msgs::msg::PointField::FLOAT32;
+    msg->fields[1].count = 1;
 
-    msg.fields[2].name = "z";
-    msg.fields[2].offset = 8;
-    msg.fields[2].datatype = sensor_msgs::msg::PointField::FLOAT32;
-    msg.fields[2].count = 1;
+    msg->fields[2].name = "z";
+    msg->fields[2].offset = 8;
+    msg->fields[2].datatype = sensor_msgs::msg::PointField::FLOAT32;
+    msg->fields[2].count = 1;
 
-    sensor_msgs::PointCloud2Iterator<float> x_iter(msg, "x");
-    sensor_msgs::PointCloud2Iterator<float> y_iter(msg, "y");
-    sensor_msgs::PointCloud2Iterator<float> z_iter(msg, "z");
-
+    sensor_msgs::PointCloud2Iterator<float> x_iter(*msg, "x");
+    sensor_msgs::PointCloud2Iterator<float> y_iter(*msg, "y");
+    sensor_msgs::PointCloud2Iterator<float> z_iter(*msg, "z");
     for(size_t i = 0; i < points.size(); ++i, ++x_iter, ++y_iter, ++z_iter) {
       *x_iter = static_cast<float>(points[i].x());
       *y_iter = static_cast<float>(points[i].y());
       *z_iter = static_cast<float>(points[i].z());
     }
-    
-    return msg;
   }
 } // namespace cloud
+

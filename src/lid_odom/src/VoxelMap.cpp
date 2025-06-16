@@ -30,11 +30,12 @@ namespace cloud{
         auto &voxel_data = query->second;
         if(voxel_data.size() < max_points_per_voxel_ || 
          !std::any_of(voxel_data.begin(), voxel_data.end(),
-         [&](const auto &point){return (point - point).norm() < resolution_spacing;})){
+         [&](const auto &existing_point){return (existing_point - point).norm() 
+          < resolution_spacing;})){
           // less than max points or within resolution_spacing to add voxel_spacing
           voxel_data.push_back(point);
         }else{
-          return;
+          continue;
         }
       }
     }
