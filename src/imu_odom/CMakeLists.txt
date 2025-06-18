@@ -5,6 +5,7 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
+add_compile_options(-g -Wno-unused-variable)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -23,21 +24,18 @@ find_package(tf2_eigen REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Sophus REQUIRED)
-find_package(kindr REQUIRED)
-find_package(kindr_ros REQUIRED)
+find_package(std_srvs REQUIRED)
 
 # Create the library
 add_library(${PROJECT_NAME}_lib SHARED
   src/ImuOdom.cpp
 )
 
-target_compile_features(${PROJECT_NAME}_lib PUBLIC cxx_std_17)
+target_compile_features(${PROJECT_NAME}_lib PUBLIC cxx_std_20)
 
 target_include_directories(${PROJECT_NAME}_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
-  ${kindr_INCLUDE_DIRS}
-  ${kindr_ros_INCLUDE_DIRS}
 )
 
 ament_target_dependencies(${PROJECT_NAME}_lib
@@ -49,22 +47,19 @@ ament_target_dependencies(${PROJECT_NAME}_lib
   tf2_ros
   tf2_eigen
   geometry_msgs
-  kindr
-  kindr_ros
+  std_srvs
 )
 
 target_link_libraries(${PROJECT_NAME}_lib
   Eigen3::Eigen
   Sophus::Sophus
-  ${kindr_LIBRARIES}
-  ${kindr_ros_LIBRARIES}
 )
 
 # Register the component
 rclcpp_components_register_nodes(${PROJECT_NAME}_lib "imu_odom::ImuOdom")
 
 # Create the executable
-add_executable(${PROJECT_NAME}_node src/imu_odom_node.cpp)
+add_executable(${PROJECT_NAME}_node src/ImuOdomNode.cpp)
 target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME}_lib)
 
 # Testing
@@ -100,8 +95,9 @@ ament_export_dependencies(
   tf2_ros
   tf2_eigen
   geometry_msgs
-  kindr
-  kindr_ros
+  std_srvs
+  Eigen3
+  Sophus
 )
 
 ament_package()
