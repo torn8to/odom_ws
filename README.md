@@ -15,8 +15,6 @@ requires oneapi TBB, eigen, and sophus outside of ros2
 -- parameter_optimization to fix_speed up
 
 ## visualizations
-z axis is pinned
-----------------------------------------
 ![Odometry Visualization](media/output.gif)
 
 ## Packages
