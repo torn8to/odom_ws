@@ -16,7 +16,7 @@ requires oneapi TBB, eigen, and sophus outside of ros2
 
 ## visualizations
 z axis is pinned
-![Odometry Visualization](output.gif)
+![Odometry Visualization](media/output.gif)
 
 ## Packages
 
@@ -45,7 +45,6 @@ z axis is pinned
 ### kindr_ros
 - ROS interface for the Kindr library
 - Provides message definitions and conversions for kinematic and dynamic quantities
-- unused
 
 
 ## 2023 Hilti SLAM Challenge Dataset
