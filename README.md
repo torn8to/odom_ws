@@ -16,6 +16,7 @@ requires oneapi TBB, eigen, and sophus outside of ros2
 
 ## visualizations
 z axis is pinned
+----------------------------------------
 ![Odometry Visualization](media/output.gif)
 
 ## Packages
