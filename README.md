@@ -8,7 +8,7 @@ requires oneapi TBB, eigen, and sophus outside of ros2
 
 ## TODO
 - [x] IMU ODOM
-- [ ] lid_odom working in real time (broken)
+- [ ] lid_odom working in real time (improve performance)
 - [ ] fuse sensor_data
 - [ ] create_depth image_dataset
 
