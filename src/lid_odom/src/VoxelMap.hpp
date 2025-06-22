@@ -13,6 +13,7 @@ class VoxelMap {
   public:
     explicit VoxelMap(double voxel_resolution = 0.1, double max_range =100.0, int max_points_per_voxel = 1)
     : voxel_resolution_(voxel_resolution),
+      max_range_(max_range),
       max_points_per_voxel_(max_points_per_voxel) {}
     
     inline void clear() { map_.clear(); }

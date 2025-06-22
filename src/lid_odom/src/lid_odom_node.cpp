@@ -52,7 +52,7 @@ public:
     config.voxel_resolution_beta = get_parameter("voxel_resolution_beta").as_double();
     config.max_points_per_voxel = get_parameter("max_points_per_voxel").as_int();
     config.imu_integration_enabled = get_parameter("imu_integration_enabled").as_bool();
-    config.odom_downsample = get_parameter("odom_downsample").as_bool;
+    config.odom_downsample = get_parameter("odom_downsample").as_bool();
 
     odom_frame_id_ = get_parameter("map_frame").as_string();
     child_frame_id_ = get_parameter("child_frame").as_string();

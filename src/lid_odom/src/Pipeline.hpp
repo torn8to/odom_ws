@@ -95,9 +95,9 @@ private:
   double voxel_resolution_beta_; // voxel resolution for the beta layer
   bool imu_integration_enabled_;
   int max_points_per_voxel_;
+  bool odom_voxel_downsample_;
   cloud::VoxelMap voxel_map_;
   std::vector<Eigen::Vector3d> last_measurement_;
 };
 
 } // namespace cloud
-

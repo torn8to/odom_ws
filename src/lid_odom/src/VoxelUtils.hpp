@@ -15,7 +15,7 @@ namespace cloud{
  */
 std::vector<Eigen::Vector3d> voxelDownsample(std::vector<Eigen::Vector3d> &cloud, double voxel_size,double max_distance, int max_points_per_voxel) {
     cloud::VoxelMap voxel_filter(voxel_size, max_distance, max_points_per_voxel);
-    std::vector<Eigen::Vector3d> pruned_cloud =  voxel_filter.removeFarPoints(cloud)
+    std::vector<Eigen::Vector3d> pruned_cloud =  voxel_filter.removeFarPoints(cloud);
     voxel_filter.addPoints(pruned_cloud);
     return voxel_filter.cloud();
 }
