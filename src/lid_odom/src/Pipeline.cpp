@@ -14,8 +14,8 @@ Pipeline::Pipeline(const PipelineConfig &config)
     voxel_resolution_beta_(config.voxel_resolution_beta),
     imu_integration_enabled_(config.imu_integration_enabled),
     max_points_per_voxel_(config.max_points_per_voxel),
-    voxel_map_(cloud::VoxelMap((config.max_distance/config.voxel_factor) * config.voxel_resolution_alpha, config.max_points_per_voxel)),
-    voxel_odom_(cloud::VoxelMap((config.max_distance/config.voxel_factor) * config.voxel_resolution_beta, config.max_points_per_voxel))
+    voxel_map_(cloud::VoxelMap((config.max_distance/config.voxel_factor) * config.voxel_resolution_alpha,
+    config.max_distance_ ,config.max_points_per_voxel)),
 {
   // Any additional initialization if needed
 }
@@ -37,11 +37,10 @@ std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> Pipeline::odometryUpdate(
   return std::make_tuple(position(), cloud_voxel_mapping);
   }
   std::vector<Eigen::Vector3d> cloud_voxel_odom = voxelDownsample(cloud,
-   max_distance_ / voxel_factor_ * voxel_resolution_beta_,
-    1);
+   max_distance_ / voxel_factor_ * voxel_resolution_beta_, max_distance_,1);
 
   std::vector<Eigen::Vector3d> cloud_voxel_mapping = voxelDownsample(cloud,
-   max_distance_ / voxel_factor_ * voxel_resolution_alpha_,
+   max_distance_ / voxel_factor_ * voxel_resolution_alpha_, max_distance_
     1);
 
   Sophus::SE3d new_position = registration_.alignPointsToMap(

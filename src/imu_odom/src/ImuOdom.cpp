@@ -193,14 +193,8 @@ void ImuOdom::publishTransform(const rclcpp::Time& current_time) {
   // Get the quaternion directly from the transform's rotation part
   // This ensures we get the proper orientation representation
   Eigen::Quaterniond quat = transform_.so3().unit_quaternion();
-  
-  // Ensure the quaternion is normalized
-  if (std::abs(quat.norm() - 1.0) > 1e-6) {
-    quat.normalize();
-    RCLCPP_WARN(get_logger(), "TF quaternion was not normalized, normalized it: w=%.4f, x=%.4f, y=%.4f, z=%.4f", 
-                quat.w(), quat.x(), quat.y(), quat.z());
-  }
-  
+  quat.normalize() 
+
   // Set rotation
   tf_msg.transform.rotation.x = quat.x();
   tf_msg.transform.rotation.y = quat.y();

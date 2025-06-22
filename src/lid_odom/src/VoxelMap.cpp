@@ -17,7 +17,7 @@ static const std::array<Voxel, 27> voxel_shifts{
 
 namespace cloud{
   void VoxelMap::addPoints(const std::vector<Eigen::Vector3d> &points){
-    double resolution_spacing = std::sqrt(voxel_resolution_*voxel_resolution_/max_points_per_voxel_);
+    double resolution_spacing_squared = voxel_resolution_*voxel_resolution_/max_points_per_voxel_;
     for(const auto &point : points){
       const Voxel voxel = PointToVoxel(point, voxel_resolution_);
       auto query = map_.find(voxel);
@@ -29,10 +29,8 @@ namespace cloud{
       }else{
         auto &voxel_data = query->second;
         if(voxel_data.size() < max_points_per_voxel_ || 
-         !std::any_of(voxel_data.begin(), voxel_data.end(),
-         [&](const auto &existing_point){return (existing_point - point).norm() 
-          < resolution_spacing;})){
-          // less than max points or within resolution_spacing to add voxel_spacing
+         std::any_of(voxel_data.begin(), voxel_data.end(),
+         [&](const auto &existing_point){return (existing_point - point).squaredNorm() < resolution_spacing_squared;})){
           voxel_data.push_back(point);
         }else{
           continue;
@@ -52,6 +50,17 @@ namespace cloud{
    return transformed_points;
   }
 
+
+  std::vector<Eigen::Vector3d> VoxelMap::removeFarPoints(const std::vector<Eigen::Vector3d> &cloud){
+    double max_range_squared = max_range_ * max_range_;
+    std::vector<Eigen::Vector3d> pruned_cloud;
+    pruned_cloud.reserve(cloud.size());
+    std::for_each(cloud.begin(), cloud.end(),[&](const auto point){
+                    if(point.squaredNorm() < max_range_squared){pruned_cloud.push_back(point);}
+                  });
+    return pruned_cloud;
+  }
+
 std::vector<Eigen::Vector3d> VoxelMap::cloud() const {
     std::vector<Eigen::Vector3d> cloud;
     cloud.reserve(map_.size() * static_cast<size_t>(max_points_per_voxel_));
@@ -61,7 +70,6 @@ std::vector<Eigen::Vector3d> VoxelMap::cloud() const {
                   });
     return cloud;
   }
-
 
 std::tuple<Eigen::Vector3d, double> VoxelMap::firstNearestNeighborQuery(const Eigen::Vector3d &point) const {
   const cloud::Voxel voxel = cloud::PointToVoxel(point, voxel_resolution_);

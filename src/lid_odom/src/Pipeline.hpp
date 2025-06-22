@@ -84,6 +84,7 @@ public:
    * @param transformation_matrix The transformation matrix to set as current position
    */
   void updatePosition(const Sophus::SE3d &transformation_matrix);
+
 private:
   Registration registration_;
   Sophus::SE3d current_position_;
@@ -94,7 +95,6 @@ private:
   bool imu_integration_enabled_;
   int max_points_per_voxel_;
   cloud::VoxelMap voxel_map_;
-  cloud::VoxelMap voxel_odom_;
   std::vector<Eigen::Vector3d> last_measurement_;
 };
 
