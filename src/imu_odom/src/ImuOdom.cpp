@@ -36,10 +36,6 @@ ImuOdom::ImuOdom()
   odom_pub_ = create_publisher<nav_msgs::msg::Odometry>("odom_imu", 10);
 
 
-  set_bias_service_ = create_service<std_srvs::srv::Trigger>(
-    "set_imu_bias", 
-    std::bind(&ImuOdom::setBiasCallback, this, std::placeholders::_1, std::placeholders::_2));
-
   // Declare parameterss
   declare_parameter("publish_transform",true);
   declare_parameter("frame_id", frame_id_);
@@ -47,7 +43,7 @@ ImuOdom::ImuOdom()
   declare_parameter("imu_frame_id", imu_frame_id_);
   declare_parameter("x_acceleration_bias", -0.23);
   declare_parameter("y_acceleration_bias", -0.13);
-  declare_parameter("z_acceleration_bias", 0.10);
+  declare_parameter("z_acceleration_bias", 0.00);
   declare_parameter("x_angular_velocity_bias", 0.00);
   declare_parameter("y_angular_velocity_bias", 0.00);
   declare_parameter("z_angular_velocity_bias", 0.00);
@@ -113,10 +109,11 @@ void ImuOdom::integrateImu(const sensor_msgs::msg::Imu::SharedPtr msg){
 
   Eigen::Vector3d imu_angular_velocity(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
 
- //orienation_corrections 
-  Eigen::Vector3d orientation_corrected_acceleration = (renormalize_imu_orientation_.inverse()
-                                                        * linear_acceleration) + gravity_bias_ 
-                                                        - linear_acceleration_bias_;
+  Eigen::Vector3d orientation_corrected_acceleration = (renormalize_imu_orientation_.inverse()* linear_acceleration) +
+                                            transform_.so3().inverse()*gravity_bias_ - linear_acceleration_bias_;
+
+
+
   //orientation_corrected_acceleration = orientation_corrected_acceleration.array() * frame_flip.array();
   Eigen::Vector3d processed_angular_velocity = (renormalize_imu_orientation_.inverse() * imu_angular_velocity) - angular_velocity_bias_;
   double dt = (current_time - last_time_).seconds(); 
