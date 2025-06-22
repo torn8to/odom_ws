@@ -67,7 +67,6 @@ def generate_launch_description():
 
     # Nodes and processes to launch
     # 1. IMU Odometry Node
-    '''
     imu_odom_node = Node(
         package='imu_odom',
         executable='imu_odom_node',
@@ -77,7 +76,7 @@ def generate_launch_description():
             'frame_id': 'odom',
             'child_frame_id': 'base_link'
         }]
-    )'''
+    )
     
     # 2. ROS2 Bag playback process
     bag_play_w_delay = ExecuteProcess(
@@ -95,11 +94,24 @@ def generate_launch_description():
         output='screen',
         condition=IfCondition(use_rviz)
     )
-
+    '''
     lid_odom = Node(package="lid_odom",
                     executable='lid_odom_node',
                     ouput="screen")
-    
+    '''
+    # Static transform broadcaster from map to odom
+    map_to_odom = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='static_transform_publisher',
+        arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom'],
+        output='screen'
+    )
+
+
+
+
+
     # Create and return launch description
     return LaunchDescription([
         bag_file_arg,
@@ -107,6 +119,8 @@ def generate_launch_description():
         use_sim_time_arg,
         rviz_config_arg,
         robot_state_publisher_node,
+        imu_odom_node,
+        map_to_odom,
         bag_play_w_delay,
         rviz_node
     ])

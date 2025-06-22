@@ -29,11 +29,12 @@ public:
     //parameter shenanigans
     declare_parameter("publish_transform", true);
     declare_parameter("debug", true);
-    declare_parameter("max_distance", 30.0);
+    declare_parameter("max_distance", 10.0);
     declare_parameter("voxel_factor", 50.0);
     declare_parameter("voxel_resolution_alpha", 1.5);
     declare_parameter("voxel_resolution_beta", 0.5);
-    declare_parameter("max_points_per_voxel", 13);
+    declare_parameter("max_points_per_voxel", 27);
+    declare_parameter("odom_downsample", false);
     declare_parameter("map_frame", "lid_odom");
     declare_parameter("odom_frame", "lid_odom");
     declare_parameter("child_frame", "base_link");
@@ -42,7 +43,7 @@ public:
     declare_parameter("imu_integration_enabled", false);
     declare_parameter("map_update_period", 2.0);
     declare_parameter("position_covariance", 0.1);
-    declare_parameter("orientation_covariance_", 0.1);
+    declare_parameter("orientation_covariance", 0.1);
     
     // Get parameters
     config.max_distance = get_parameter("max_distance").as_double();
@@ -51,17 +52,17 @@ public:
     config.voxel_resolution_beta = get_parameter("voxel_resolution_beta").as_double();
     config.max_points_per_voxel = get_parameter("max_points_per_voxel").as_int();
     config.imu_integration_enabled = get_parameter("imu_integration_enabled").as_bool();
+    config.odom_downsample = get_parameter("odom_downsample").as_bool;
 
     odom_frame_id_ = get_parameter("map_frame").as_string();
     child_frame_id_ = get_parameter("child_frame").as_string();
     base_frame_id_ = get_parameter("base_frame").as_string();
     lidar_link_id_ = get_parameter("lidar_frame").as_string();
-
     publish_transform_ = get_parameter("publish_transform").as_bool();
     debug_ = get_parameter("debug").as_bool();
 
-    position_covariance_ = 0.1;
-    orientation_covariance_ = 0.1;
+    position_covariance_ = get_parameter("position_covariance").as_double();
+    orientation_covariance_ = get_parameter("orientation_covariance").as_double();
     
     pipeline_ = std::make_unique<cloud::Pipeline>(config);
     tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
@@ -70,6 +71,7 @@ public:
     point_cloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
       "points", 10, 
       std::bind(&LidarOdometryNode::pointCloudCallback, this, std::placeholders::_1));
+
     odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("lid_odom", 10);
     map_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("voxel_map", 10);
     cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("cloud", 10);
@@ -165,7 +167,6 @@ private:
     Sophus::SE3d updated_pose = std::get<0>(result);
     
     publishOdometry(msg->header.stamp, updated_pose);
-
 
     if (debug_){
       this->publishDebug(std::get<1>(result));

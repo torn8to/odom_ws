@@ -19,6 +19,7 @@ struct PipelineConfig {
   int num_threads = 8;
   int num_iterations = 500;
   double convergence = 1e-3;
+  bool odom_downsample = true;
 };
 
 class Pipeline {
