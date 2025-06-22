@@ -57,22 +57,6 @@ private:
    */
   void integrateImu(const sensor_msgs::msg::Imu::SharedPtr msg);
 
-  /**
-   * @brief Sets the biases for the IMU sensor based on current readings
-   * @return True if bias setting was successful
-   */
-  bool setBias();
-
-  /**
-   * @brief Service callback to set IMU biases
-   * @param request Service request (unused)
-   * @param response Service response with success status
-   */
-  void setBiasCallback(
-    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-    std::shared_ptr<std_srvs::srv::Trigger::Response> response);
-
-  // Type definitions using Eigen and Sophus
 
   // Subscribers and publishers
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
@@ -107,11 +91,8 @@ private:
   Sophus::SE3d transform_; 
 
   std::string frame_id_{"map"};
-  std::string child_frame_id_{"odom_imu"};
+  std::string child_frame_id_{"base_link"};
   std::string imu_frame_id_{"xsens_imu_link"};
-  std::string base_frame_id_{"base_link"};
-  // Service
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr set_bias_service_;
 };
 
 }  // namespace imu_odom

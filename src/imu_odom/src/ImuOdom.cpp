@@ -44,24 +44,22 @@ ImuOdom::ImuOdom()
   declare_parameter("publish_transform",true);
   declare_parameter("frame_id", frame_id_);
   declare_parameter("child_frame_id", child_frame_id_);
-  declare_parameter("base_frame_id", base_frame_id_);
   declare_parameter("imu_frame_id", imu_frame_id_);
   declare_parameter("x_acceleration_bias", -0.23);
   declare_parameter("y_acceleration_bias", -0.13);
-  declare_parameter("z_acceleration_bias", 0.00);
+  declare_parameter("z_acceleration_bias", 0.10);
   declare_parameter("x_angular_velocity_bias", 0.00);
   declare_parameter("y_angular_velocity_bias", 0.00);
   declare_parameter("z_angular_velocity_bias", 0.00);
   declare_parameter("flip_x_axis",false);// parameters to align the imu frame if imu frame tf frame rules differ from imu
   declare_parameter("flip_y_axis",false);
   declare_parameter("flip_z_axis",false);
-  declare_parameter("pin_z_axis",true);
+  declare_parameter("pin_z_axis",false);
 
   pin_z = get_parameter("pin_z_axis").as_bool();
 
   frame_id_ = get_parameter("frame_id").as_string();
   child_frame_id_ = get_parameter("child_frame_id").as_string();
-  base_frame_id_ = get_parameter("base_frame_id").as_string();
   imu_frame_id_ = get_parameter("imu_frame_id").as_string();
 
   linear_acceleration_bias_ = Eigen::Vector3d(
@@ -79,23 +77,6 @@ ImuOdom::ImuOdom()
   RCLCPP_INFO(get_logger(), "IMU Odometry node initialized");
 }
 
-bool ImuOdom::setBias() {
-  return false;
-}
-
-void ImuOdom::setBiasCallback(
-  const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-  std::shared_ptr<std_srvs::srv::Trigger::Response> response){
-  (void)request;
-  bool success = setBias();
-  response->success = success;
-  if (success) {
-    response->message = "IMU bias calibration successful";
-  } else {
-    response->message = "IMU bias calibration failed";
-  }
-}
-
 void ImuOdom::integrateImu(const sensor_msgs::msg::Imu::SharedPtr msg){
   rclcpp::Time current_time = msg->header.stamp;
   if(!imu_transform_acquired){
@@ -104,7 +85,7 @@ void ImuOdom::integrateImu(const sensor_msgs::msg::Imu::SharedPtr msg){
       Sophus::SE3d transform;
       imu_transform = tf_buffer_->lookupTransform(
         imu_frame_id_,
-        base_frame_id_,
+        child_frame_id_,
         tf2::TimePointZero, 
         tf2::durationFromSec(0.5));
       tf2::fromMsg(imu_transform.transform, transform);
