@@ -21,7 +21,6 @@
 
 namespace imu_odom
 {
-
 class ImuOdom : public rclcpp::Node
 {
 public:
@@ -31,7 +30,7 @@ public:
    * @brief Constructor for the ImuOdom node
    * @param options Node options for ROS2 node initialization
    */
-  explicit ImuOdom(const rclcpp::NodeOptions & options);
+  explicit ImuOdom();
 
   /**
    * @brief Callback function for processing IMU messages
@@ -92,20 +91,20 @@ private:
   rclcpp::Time last_time_;
   bool has_first_message_{false};
   bool has_orientation_{false};
-
-  Vector3 gravity_bias_{0, 0.0, 9.81};
-  Vector3 linear_acceleration_bias_{0.0, 0.0, 0.0};
-  Vector3 angular_velocity_bias_{0.0, 0.0, 0.0};
-
-  Vector3 linear_velocity_{0.0, 0.0, 0.0};
-  Vector3 angular_velocity_{0.0, 0.0, 0.0};
+  Eigen::Vector3d gravity_bias_{0, 0.0, -9.81};
+  Eigen::Vector3d linear_acceleration_bias_{0.0, 0.0, 0.0};
+  Eigen::Vector3d angular_velocity_bias_{0.0, 0.0, 0.0};
+  Eigen::Vector3d linear_velocity_{0.0, 0.0, 0.0};
+  Eigen::Vector3d angular_velocity_{0.0, 0.0, 0.0};
 
   double pose_covariance_{0.1};
   double orientation_covariance_{0.1};
 
+  bool pin_z = false;
+  bool imu_transform_acquired{false};
   Sophus::SE3d imu_base_link_transform_;
-  Sophus::SO3d renormalize_orientation_transform_;
-  Sophus::SE3d position_;
+  Sophus::SO3d renormalize_imu_orientation_;
+  Sophus::SE3d transform_; 
 
   std::string frame_id_{"map"};
   std::string child_frame_id_{"odom_imu"};
