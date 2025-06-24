@@ -9,10 +9,10 @@ namespace tf2 {
                                             transform.transform.translation.y,
                                             transform.transform.translation.z);
 
-        Eigen::Quaterniond rot = Eigen::Quaterniond(transform.transform.rotation.x,
+        Eigen::Quaterniond rot = Eigen::Quaterniond(transform.transform.rotation.w,
+                                                    transform.transform.rotation.x,
                                                     transform.transform.rotation.y,
-                                                    transform.transform.rotation.z,
-                                                    transform.transform.rotation.w);
+                                                    transform.transform.rotation.z);
         return Sophus::SE3d(Sophus::SO3d(rot), trans);
     }
 

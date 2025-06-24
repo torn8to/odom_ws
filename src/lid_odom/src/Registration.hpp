@@ -8,7 +8,7 @@
 
 class Registration{
   public:
-    explicit Registration(int num_iterations, int max_points_per_voxel, double convergence, int num_threads);
+    explicit Registration(int num_iterations, double convergence, int num_threads);
 
     Sophus::SE3d alignPointsToMap(const std::vector<Eigen::Vector3d> &points, 
                                   const cloud::VoxelMap &voxel_map,
@@ -18,7 +18,6 @@ class Registration{
       
   private:  
     int max_num_iterations_;
-    int max_points_per_voxel_;
     double convergence_;
     int num_threads_;
 };

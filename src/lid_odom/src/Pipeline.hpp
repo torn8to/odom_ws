@@ -1,10 +1,12 @@
 #pragma once
 
 #include <vector>
+#include <algorithm>
 #include <Eigen/Core>
 #include <sophus/se3.hpp>
 #include "VoxelMap.hpp"
 #include "Registration.hpp"
+#include "Threshold.hpp"
 
 
 namespace cloud {
@@ -20,6 +22,8 @@ struct PipelineConfig {
   int num_iterations = 500;
   double convergence = 1e-3;
   bool odom_downsample = true;
+  double initial_threshold = 1.0;
+  double min_motion_threshold =  0.1;
 };
 
 class Pipeline {
@@ -70,6 +74,26 @@ public:
     return voxel_map_.cloud();
   }
 
+  /**
+   * @brief Removes points from a cloud that are beyond the maximum distance from origin
+   * 
+   * This method filters out points from the input cloud that have a Euclidean distance
+   * from the origin (0,0,0) greater than the maximum distance threshold. Points are
+   * kept if their norm (distance from origin) is less than max_distance_.
+   * 
+   * @param cloud The input point cloud to filter
+   * @return A filtered point cloud containing only points within the maximum distance
+   */
+
+std::vector<Eigen::Vector3d> removeFarPoints(std::vector<Eigen::Vector3d> &cloud){
+  std::vector<Eigen::Vector3d> pruned_cloud;
+  pruned_cloud.reserve(cloud.size());
+  std::for_each(cloud.begin(),cloud.end(),
+  [&](const auto point){
+    if(point.norm()<max_distance_){pruned_cloud.push_back(point);}});
+  return pruned_cloud;
+  }
+
  inline bool mapEmpty(){
     return voxel_map_.empty();
   }
@@ -84,11 +108,13 @@ public:
    * @brief Sets the current position
    * @param transformation_matrix The transformation matrix to set as current position
    */
-  void updatePosition(const Sophus::SE3d &transformation_matrix);
+  void updatePosition(const Sophus::SE3d transformation_matrix);
 
 private:
   Registration registration_;
   Sophus::SE3d current_position_;
+  Sophus::SE3d pose_diff_;
+  AdaptiveThreshold threshold;
   double voxel_factor_;
   double max_distance_;
   double voxel_resolution_alpha_; // voxel resolution for the alpha layer
@@ -97,7 +123,6 @@ private:
   int max_points_per_voxel_;
   bool odom_voxel_downsample_;
   cloud::VoxelMap voxel_map_;
-  std::vector<Eigen::Vector3d> last_measurement_;
 };
 
 } // namespace cloud

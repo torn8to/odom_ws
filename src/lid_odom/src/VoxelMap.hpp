@@ -11,11 +11,11 @@
 namespace cloud {
 class VoxelMap {
   public:
-    explicit VoxelMap(double voxel_resolution = 0.1, double max_range =100.0, int max_points_per_voxel = 1)
+    explicit VoxelMap(double voxel_resolution, double max_range, int max_points_per_voxel)
     : voxel_resolution_(voxel_resolution),
       max_range_(max_range),
-      max_points_per_voxel_(max_points_per_voxel) {}
-    
+      max_points_per_voxel_(max_points_per_voxel) {map_.reserve(522391);}
+
     inline void clear() { map_.clear(); }
     inline bool empty() const { return map_.empty(); }
     void addPoints(const std::vector<Eigen::Vector3d> &points);

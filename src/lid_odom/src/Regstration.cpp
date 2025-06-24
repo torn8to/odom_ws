@@ -37,7 +37,7 @@ Correspondences DataAssociation(const std::vector<Eigen::Vector3d> &points,
                                 const double max_correspondance_distance) {
     using points_iterator = std::vector<Eigen::Vector3d>::const_iterator;
     Correspondences correspondences;
-    //correspondences.reserve(points.size());
+    correspondences.reserve(points.size());
     tbb::parallel_for(
         // Range
         tbb::blocked_range<points_iterator>{points.cbegin(), points.cend()},
@@ -105,9 +105,8 @@ LinearSystem BuildLinearSystem(const Correspondences &correspondences,
 }  // namespace
 
 
-Registration::Registration(int num_iterations, int max_points_per_voxel, double convergence, int num_threads ):
+Registration::Registration(int num_iterations, double convergence, int num_threads ):
           max_num_iterations_(num_iterations),
-          max_points_per_voxel_(max_points_per_voxel),
           convergence_(convergence),
           num_threads_(num_threads > 0 ? num_threads : tbb::this_task_arena::max_concurrency()){
     static const auto tbb_control_settings = tbb::global_control(
@@ -123,7 +122,7 @@ Sophus::SE3d Registration::alignPointsToMap(const std::vector<Eigen::Vector3d> &
                                             const double kernel_scale){
   std::vector<Eigen::Vector3d> source = points;
   TransformPoints(initial_guess, source);
-
+  int num_iterations;
   Sophus::SE3d T_icp = Sophus::SE3d();
   for (int j = 0; j < max_num_iterations_; ++j) {
     const auto correspondences = DataAssociation(source, voxel_map, max_distance);
@@ -134,8 +133,9 @@ Sophus::SE3d Registration::alignPointsToMap(const std::vector<Eigen::Vector3d> &
     const Sophus::SE3d estimation = Sophus::SE3d::exp(dx);
     TransformPoints(estimation, source);
     T_icp = estimation * T_icp;
+    num_iterations = j;
     if (dx.norm() < convergence_) break;
   }
-    // Spit the final transformation
+    RCLCPP_INFO(rclcpp::get_logger("lidar_odometry_mapping"), "ICP converged in %d iterations", num_iterations + 1);
   return T_icp * initial_guess;
 }

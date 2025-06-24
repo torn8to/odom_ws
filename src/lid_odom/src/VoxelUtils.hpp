@@ -1,9 +1,11 @@
 #pragma once
-
+#include <rclcpp/rclcpp.hpp>
+#include <algorithm>
+#include <unordered_map>
 #include <vector>
 #include <Eigen/Core>
 #include "VoxelMap.hpp"
-
+#include "PointToVoxel.hpp"
 
 namespace cloud{
 /**
@@ -13,17 +15,18 @@ namespace cloud{
  * @param max_points_per_voxel The maximum number of points per voxel
  * @return The downsampled point cloud
  */
-std::vector<Eigen::Vector3d> voxelDownsample(std::vector<Eigen::Vector3d> &cloud, double voxel_size,double max_distance, int max_points_per_voxel) {
-    cloud::VoxelMap voxel_filter(voxel_size, max_distance, max_points_per_voxel);
-    std::vector<Eigen::Vector3d> pruned_cloud =  voxel_filter.removeFarPoints(cloud);
-    voxel_filter.addPoints(pruned_cloud);
-    return voxel_filter.cloud();
+std::vector<Eigen::Vector3d> voxelDownsample(std::vector<Eigen::Vector3d> &cloud, double voxel_size) {
+    std::unordered_map<cloud::Voxel,Eigen::Vector3d> voxel_filter;
+    voxel_filter.reserve(10091);
+    std::for_each(cloud.begin(), cloud.end(),
+    [&](const auto point){voxel_filter.insert({cloud::PointToVoxel(point,voxel_size), point});});
+    std::vector<Eigen::Vector3d> pruned_cloud;
+    pruned_cloud.reserve(voxel_filter.size());
+    for (const auto& kv : voxel_filter) {
+        pruned_cloud.push_back(kv.second);
+    }
+    RCLCPP_INFO(rclcpp::get_logger("lidar_odometry_mapping"),
+                "Voxel downsampled cloud: %zu -> %zu points", cloud.size(), pruned_cloud.size());
+    return pruned_cloud;
 }
-
-
-  //TODO: velocity compensation on point cloud
-  // propogate last update delta to cover unskew points takes in 
-  //std::vector<Eigen::Vector3d> deSkewCloud(geometry_msgs::msg::PointCloud2, std::tuple<Eigen::Vector3d,Eigen::Vector3d> velocity,)
-
-
 } // namespace cloud
