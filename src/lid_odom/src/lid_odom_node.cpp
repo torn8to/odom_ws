@@ -29,8 +29,9 @@ public:
     //parameter shenanigans
     declare_parameter("publish_transform", true);
     declare_parameter("debug", true);
-    declare_parameter("max_distance", 10.0);
-    declare_parameter("voxel_factor", 50.0);
+    declare_parameter("max_distance", 30.0);
+    declare_parameter("max_distance_odom", 8.0);
+    declare_parameter("voxel_factor", 100.0);
     declare_parameter("voxel_resolution_alpha", 1.5);
     declare_parameter("voxel_resolution_beta", 0.5);
     declare_parameter("max_points_per_voxel", 27);

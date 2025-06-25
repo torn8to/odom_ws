@@ -30,15 +30,18 @@ std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> Pipeline::odometryUpdate(
   // Create registration object for point cloud alignment down 
   // sample via odom and downsample via mapping to create
   // run alignment with odometry downsampling and update via 
-
-  std::vector<Eigen::Vector3d> cloud_voxel_odom = voxelDownsample(cloud,
-   max_distance_ / voxel_factor_ * voxel_resolution_beta_);
+  std::vector<Eigen::Vector3d> &cloud_voxel_odom;
+if (odom_voxel_downsample_){
+  cloud_voxel_odom = voxelDownsample(cloud, max_distance_ / voxel_factor_ * voxel_resolution_beta_);
+}
+else{
+  cloud_voxel_odom 
+}
 
   std::vector<Eigen::Vector3d> cloud_voxel_odom_reduced = removeFarPoints(cloud_voxel_odom);
    
 
-  std::vector<Eigen::Vector3d> cloud_voxel_mapping = voxelDownsample(cloud,
-   max_distance_ / voxel_factor_ * voxel_resolution_alpha_);
+  std::vector<Eigen::Vector3d> cloud_voxel_mapping = voxelDownsample(cloud,max_distance_ / voxel_factor_ * voxel_resolution_alpha_);
    
 
   RCLCPP_INFO(rclcpp::get_logger("lidar_odometry_mapping"), "Odom cloud points: %zu", cloud_voxel_odom.size());
@@ -50,7 +53,7 @@ std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> Pipeline::odometryUpdate(
   RCLCPP_INFO(rclcpp::get_logger("lidar_odometry_mapping"), "Sigma: %f", sigma);
 
   Sophus::SE3d new_position = registration_.alignPointsToMap(
-    cloud_voxel_odom,
+    cloud_voxel_odom_reduced,
     voxel_map_,
     initial_guess,
     3.0 * sigma,

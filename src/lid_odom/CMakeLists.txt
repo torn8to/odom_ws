@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.8)
 project(lid_odom)
 
+
+add_compile_options(-O3)
+add_compile_options(-g)
+
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -80,6 +84,7 @@ install(
   RUNTIME DESTINATION lib/${PROJECT_NAME}
   INCLUDES DESTINATION include
 )
+
 
 # Export dependencies
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)

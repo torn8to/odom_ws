@@ -17,7 +17,7 @@ namespace cloud{
  */
 std::vector<Eigen::Vector3d> voxelDownsample(std::vector<Eigen::Vector3d> &cloud, double voxel_size) {
     std::unordered_map<cloud::Voxel,Eigen::Vector3d> voxel_filter;
-    voxel_filter.reserve(10091);
+    voxel_filter.reserve(43103);
     std::for_each(cloud.begin(), cloud.end(),
     [&](const auto point){voxel_filter.insert({cloud::PointToVoxel(point,voxel_size), point});});
     std::vector<Eigen::Vector3d> pruned_cloud;
@@ -25,8 +25,7 @@ std::vector<Eigen::Vector3d> voxelDownsample(std::vector<Eigen::Vector3d> &cloud
     for (const auto& kv : voxel_filter) {
         pruned_cloud.push_back(kv.second);
     }
-    RCLCPP_INFO(rclcpp::get_logger("lidar_odometry_mapping"),
-                "Voxel downsampled cloud: %zu -> %zu points", cloud.size(), pruned_cloud.size());
+    RCLCPP_INFO(rclcpp::get_logger("lidar_odometry_mapping"),"Voxel downsampled cloud: %zu -> %zu points", cloud.size(), pruned_cloud.size());
     return pruned_cloud;
 }
 } // namespace cloud

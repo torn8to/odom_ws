@@ -12,7 +12,7 @@
 namespace tf2 {
   void fromMsg(const geometry_msgs::msg::Transform& msg, Sophus::SE3d& tf_mat) {
     tf_mat = Sophus::SE3d(
-      Eigen::Quaterniond(msg.rotation.w, msg.rotation.x, msg.rotation.y, msg.rotation.z),
+      Sophus::SO3D(Eigen::Quaterniond(msg.rotation.w, msg.rotation.x, msg.rotation.y, msg.rotation.z)),
       Eigen::Vector3d(msg.translation.x, msg.translation.y, msg.translation.z)
     );
   }

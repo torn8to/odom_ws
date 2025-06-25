@@ -20,7 +20,7 @@ struct PipelineConfig {
   int max_points_per_voxel = 27;
   int num_threads = 8;
   int num_iterations = 500;
-  double convergence = 1e-3;
+  double convergence = 1e-4;
   bool odom_downsample = true;
   double initial_threshold = 1.0;
   double min_motion_threshold =  0.1;

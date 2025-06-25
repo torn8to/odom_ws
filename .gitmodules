@@ -4,3 +4,12 @@
 [submodule "src/trailblazer_description_ros2"]
 	path = src/trailblazer_description_ros2
 	url = https://github.com/torn8to/trailblazer_description_ros2.git
+[submodule "src/alphasense_description"]
+	path = src/alphasense_description
+	url = https://github.com/torn8to/alphasense_description.git
+[submodule "src/hesai_description"]
+	path = src/hesai_description
+	url = https://github.com/torn8to/hesai_description.git
+[submodule "src/phasma_description"]
+	path = src/phasma_description
+	url = https://github.com/torn8to/phasma_description.git
