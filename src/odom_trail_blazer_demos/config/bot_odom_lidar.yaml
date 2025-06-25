@@ -1,0 +1,34 @@
+/lidar_odometry_mapping:
+  ros__parameters:
+    base_frame: base_link
+    child_frame: base_link
+    debug: true
+    imu_integration_enabled: false
+    lidar_frame: rslidar
+    map_frame: lid_odom
+    max_distance: 20.0
+    max_points_per_voxel: 27
+    odom_downsample: true
+    odom_frame: lid_odom
+    orientation_covariance: 0.1
+    position_covariance: 0.1
+    publish_transform: true
+    qos_overrides:
+      /parameter_events:
+        publisher:
+          depth: 1000
+          durability: volatile
+          history: keep_last
+          reliability: reliable
+      /tf:
+        publisher:
+          depth: 100
+          durability: volatile
+          history: keep_last
+          reliability: reliable
+    start_type_description_service: true
+    use_sim_time: false
+    voxel_factor: 100.0
+    voxel_resolution_alpha: 3.0 
+    voxel_resolution_beta: 0.5
+

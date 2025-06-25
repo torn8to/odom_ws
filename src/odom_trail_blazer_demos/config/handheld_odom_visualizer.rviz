@@ -6,11 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /RobotModel1
-        - /TF1
         - /TF1/Frames1
-        - /PointCloud22
-        - /PointCloud23
       Splitter Ratio: 0.5
     Tree Height: 346
   - Class: rviz_common/Selection
@@ -30,7 +26,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: PointCloud2
 Visualization Manager:
   Class: ""
   Displays:
@@ -69,7 +65,64 @@ Visualization Manager:
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
-        Link Tree Style: ""
+        Link Tree Style: Links in Alphabetic Order
+        PandarXT-32:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        alphasense_imu:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        alphasense_mount:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        body:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        cam_front_left:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        cam_front_right:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        cam_side_left:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        cam_side_right:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        cam_top:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        hesai_base:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        tip:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
       Mass Properties:
         Inertia: false
         Mass: false
@@ -85,13 +138,66 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
+        PandarXT-32:
+          Value: true
+        alphasense_imu:
+          Value: true
+        alphasense_mount:
+          Value: true
+        base:
+          Value: true
+        body:
+          Value: true
+        cam_front_left:
+          Value: true
+        cam_front_right:
+          Value: true
+        cam_side_left:
+          Value: true
+        cam_side_right:
+          Value: true
+        cam_top:
+          Value: true
+        hesai_base:
+          Value: true
+        lid_odom:
+          Value: true
+        map:
+          Value: true
+        odom:
+          Value: true
+        tip:
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: false
       Tree:
-        {}
+        map:
+          lid_odom:
+            tip:
+              alphasense_mount:
+                alphasense_imu:
+                  base:
+                    {}
+                  cam_front_left:
+                    {}
+                  cam_front_right:
+                    {}
+                  cam_side_left:
+                    {}
+                  cam_side_right:
+                    {}
+                  cam_top:
+                    {}
+              body:
+                {}
+              hesai_base:
+                PandarXT-32:
+                  {}
+          odom:
+            {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -165,7 +271,7 @@ Visualization Manager:
       Channel Name: intensity
       Class: rviz_default_plugins/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: ""
+      Color Transformer: Intensity
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false
@@ -174,7 +280,7 @@ Visualization Manager:
       Min Color: 0; 0; 0
       Min Intensity: 0
       Name: PointCloud2
-      Position Transformer: ""
+      Position Transformer: XYZ
       Selectable: true
       Size (Pixels): 3
       Size (m): 0.009999999776482582
@@ -191,23 +297,23 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
+        Max Value: 5.564148902893066
+        Min Value: -2.497375965118408
         Value: true
       Axis: Z
       Channel Name: intensity
       Class: rviz_default_plugins/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: ""
+      Color Transformer: AxisColor
       Decay Time: 0
       Enabled: true
-      Invert Rainbow: false
+      Invert Rainbow: true
       Max Color: 255; 255; 255
       Max Intensity: 4096
       Min Color: 0; 0; 0
       Min Intensity: 0
       Name: PointCloud2
-      Position Transformer: ""
+      Position Transformer: XYZ
       Selectable: true
       Size (Pixels): 3
       Size (m): 0.009999999776482582
@@ -220,6 +326,34 @@ Visualization Manager:
         Value: /voxel_map
       Use Fixed Frame: true
       Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz_default_plugins/Path
+      Color: 25; 255; 0
+      Enabled: true
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Lines
+      Line Width: 0.029999999329447746
+      Name: Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /lid_odom_path
       Value: true
   Enabled: true
   Global Options:
@@ -266,26 +400,26 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz_default_plugins/Orbit
-      Distance: 57.14545440673828
+      Class: rviz_default_plugins/ThirdPersonFollower
+      Distance: 22.520097732543945
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.2979309558868408
-        Y: -5.542207717895508
-        Z: -6.64746618270874
+        X: 2.5684304237365723
+        Y: 2.174778938293457
+        Z: -1.003064513206482
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9252016544342041
-      Target Frame: <Fixed Frame>
-      Value: Orbit (rviz)
-      Yaw: 1.7503855228424072
+      Pitch: 0.7002019882202148
+      Target Frame: base
+      Value: ThirdPersonFollower (rviz_default_plugins)
+      Yaw: 6.203570365905762
     Saved: ~
 Window Geometry:
   Displays:
