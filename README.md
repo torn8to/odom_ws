@@ -1,18 +1,14 @@
 # Odometry Workspace for Trailblazer Robot
-This workspace contains ROS 2 packages for odometry using the Trailblazer robot platform from the 2023 Hilti SLAM Challenge.
-
-Is not setup to work with the handheld device also used for data collection in the challenge
+This workspace contains ROS 2 packages for odometry using the Trailblazer robot and handheld platform from the 2023 Hilti SLAM Challenge. These are operated on construction sites which provides a unique challenge with textureless concrete little color variation and repeating identical structures, and variouslighting challenges as many rooms are dark while adjacent ones are lit by the outdoors.
 
 ## lib dependencies
 requires oneapi TBB, eigen, and sophus outside of ros2
 
 ## TODO
 - [x] IMU ODOM
-- [x] lid_odom working in real time 
-- [ ] fuse sensor_data
-- [ ] create_depth image_dataset
+- [x] lid_odom working in  near real time 
+- [ ] lidar with pose graph optimization
 
--- parameter_optimization to fix_speed up
 
 ## visualizations
 ![Odometry Visualization](media/output.gif)
@@ -26,16 +22,9 @@ requires oneapi TBB, eigen, and sophus outside of ros2
 
 
 ### lid_odom
-- LiDAR-based odometry package
+- LiDAR-based odometry package using a non point cloud processing library to implement functionality top down
 - Provides real-time odometry estimation using point cloud data
-- Features point cloud registration and motion estimation
-- Publishes odometry on the `/lid_odom` topic
 - Visualizable through the included demo launch files
-
-based on kiss icp
-- removed motion  inerpolation as it caused error accumulation making demos such as the handheld unusable
-mapping issues
-
 
 
 ### trailblazer_description_ros2
@@ -51,9 +40,14 @@ mapping issues
   - Visualizing odometry results
   - Publishing robot state
 
-### kindr_ros
-- ROS interface for the Kindr library
-- Provides message definitions and conversions for kinematic and dynamic quantities
+### phasma_description
+  - The handheld device urdf files for visualization in rviz
+
+### hesai_description
+  - The handheld device urdf files for the lidar on the handheld platform
+
+### alphasense_description
+  - The handheld device urdf files for the cameras on the handheld platform
 
 
 ## 2023 Hilti SLAM Challenge Dataset
