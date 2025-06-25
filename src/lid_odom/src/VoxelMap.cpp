@@ -24,16 +24,17 @@ namespace cloud{
       if(query == map_.end()){
         std::vector<Eigen::Vector3d> vec;
         vec.reserve(max_points_per_voxel_);
-        vec.push_back(point);
-        map_[voxel] = vec;
+        vec.emplace_back(point);
+        map_.insert({voxel,std::move(vec)});
       }else{
         auto &voxel_data = query->second;
-        if(voxel_data.size() < max_points_per_voxel_ || 
+        if(voxel_data.size() == max_points_per_voxel_ || 
          std::any_of(voxel_data.begin(), voxel_data.end(),
-         [&](const auto &existing_point){return (existing_point - point).squaredNorm() < resolution_spacing_squared;})){
-          voxel_data.push_back(point);
-        }else{
+         [&](const auto &existing_point){return (existing_point - point).squaredNorm()
+          < resolution_spacing_squared;})){
           continue;
+        }else{
+          voxel_data.emplace_back(point);
         }
       }
     }
@@ -95,15 +96,17 @@ std::tuple<Eigen::Vector3d, double> VoxelMap::firstNearestNeighborQuery(const Ei
   }
 
 
-void VoxelMap::removePointsFarFromLocation(const Eigen::Vector3d& origin){
-  const auto max_distance_sq  = max_distance_ * max_distance_;
-  for(auto it  = map_.begin(), it != map_+.end()){
-    const &[voxel, voxel_points] = *it;
-    const Eigen::Vector3d f_point = voxel_points.front();
-    if(f_point.squaredNorm() > max_distance_sq){
-      map_.erase(it);
+void VoxelMap::removePointsFarFromOrigin(const Eigen::Vector3d& origin){
+  const auto max_distance_sq  = max_range_ * max_range_;
+  for(auto it = map_.begin(); it != map_.end();){
+    const auto &[voxel, voxel_points] = *it;
+    const Eigen::Vector3d &f_point = voxel_points.front();
+    if((origin-f_point).squaredNorm() > max_distance_sq){
+      it = map_.erase(it);
     }
-    else{++it;}
+    else{
+      ++it;
+    }
   }
 }
 };

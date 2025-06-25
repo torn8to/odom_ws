@@ -22,7 +22,7 @@ struct PipelineConfig {
   int num_iterations = 500;
   double convergence = 1e-4;
   bool odom_downsample = true;
-  double initial_threshold = 1.0;
+  double initial_threshold = 2.0;
   double min_motion_threshold =  0.1;
 };
 
