@@ -74,6 +74,7 @@ else{
   std::vector<Eigen::Vector3d> cloud_voxel_mapping_transformed = voxel_map_.transform_cloud(cloud_voxel_mapping, new_position);
   voxel_map_.addPoints(cloud_voxel_mapping_transformed);
   updatePosition(new_position);
+  voxel_map_.removePointsFarFromLocation(position.translation())
   return std::make_tuple(new_position, cloud_voxel_mapping);
 }
 

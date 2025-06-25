@@ -93,4 +93,17 @@ std::tuple<Eigen::Vector3d, double> VoxelMap::firstNearestNeighborQuery(const Ei
                 });
    return std::tuple<Eigen::Vector3d, double>(closest_neighbor, min_distance);
   }
+
+
+void VoxelMap::removePointsFarFromLocation(const Eigen::Vector3d& origin){
+  const auto max_distance_sq  = max_distance_ * max_distance_;
+  for(auto it  = map_.begin(), it != map_+.end()){
+    const &[voxel, voxel_points] = *it;
+    const Eigen::Vector3d f_point = voxel_points.front();
+    if(f_point.squaredNorm() > max_distance_sq){
+      map_.erase(it);
+    }
+    else{++it;}
+  }
+}
 };
