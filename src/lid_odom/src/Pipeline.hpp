@@ -12,7 +12,7 @@
 namespace cloud {
 
 struct PipelineConfig {
-  double max_distance = 30.0;
+  double max_distance = 100.0;
   double voxel_factor = 100;
   double voxel_resolution_alpha = 1.5;
   double voxel_resolution_beta = 0.5; // beta is recommended to be smaller for better odom updates
@@ -22,7 +22,7 @@ struct PipelineConfig {
   int num_iterations = 500;
   double convergence = 1e-4;
   bool odom_downsample = true;
-  double initial_threshold = 2.0;
+  double initial_threshold = 0.5;
   double min_motion_threshold =  0.1;
 };
 

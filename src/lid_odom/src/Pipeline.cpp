@@ -38,12 +38,10 @@ else{
   cloud_voxel_odom = cloud;
 }
 
-  std::vector<Eigen::Vector3d> cloud_voxel_odom_reduced = removeFarPoints(cloud_voxel_odom);
   std::vector<Eigen::Vector3d> cloud_voxel_mapping = voxelDownsample(cloud,max_distance_ / voxel_factor_ * voxel_resolution_alpha_);
    
 
   RCLCPP_INFO(rclcpp::get_logger("lidar_odometry_mapping"), "Odom cloud points: %zu", cloud_voxel_odom.size());
-  RCLCPP_INFO(rclcpp::get_logger("lidar_odometry_mapping"), "Odom cloud points: %zu", cloud_voxel_odom_reduced.size());
   RCLCPP_INFO(rclcpp::get_logger("lidar_odometry_mapping"), "mapping cloud points: %zu", cloud_voxel_mapping.size());
 
   auto initial_guess = pose_diff_ * position();
@@ -51,9 +49,9 @@ else{
   RCLCPP_INFO(rclcpp::get_logger("lidar_odometry_mapping"), "Sigma: %f", sigma);
 
   Sophus::SE3d new_position = registration_.alignPointsToMap(
-    cloud_voxel_odom_reduced,
+    cloud_voxel_odom,
     voxel_map_,
-    initial_guess,
+    position(),//initial_guess,
     3.0 * sigma,
     sigma);
 
@@ -72,7 +70,26 @@ else{
   std::vector<Eigen::Vector3d> cloud_voxel_mapping_transformed = voxel_map_.transform_cloud(cloud_voxel_mapping, new_position);
   voxel_map_.addPoints(cloud_voxel_mapping_transformed);
   updatePosition(new_position);
-  voxel_map_.removePointsFarFromOrigin(position().translation());
+  
+  // Only remove far points if the map has enough points to avoid emptying it
+  if (!voxel_map_.empty()) {
+    const size_t map_size_before = voxel_map_.size();
+    voxel_map_.removePointsFarFromOrigin(position().translation());
+    const size_t map_size_after = voxel_map_.size();
+    
+    // Log the change in map size for debugging
+    RCLCPP_INFO(rclcpp::get_logger("lidar_odometry_mapping"), 
+                "Map size before/after cleanup: %zu/%zu", 
+                map_size_before, map_size_after);
+                
+    // If too many points were removed, add back the current cloud to ensure the map isn't empty
+    if (map_size_after < map_size_before * 0.1) { // If more than 90% of map was removed
+      RCLCPP_WARN(rclcpp::get_logger("lidar_odometry_mapping"), 
+                 "Map significantly reduced in size, repopulating with current cloud");
+      voxel_map_.addPoints(cloud_voxel_mapping_transformed);
+    }
+  }
+  
   return std::make_tuple(new_position, cloud_voxel_mapping);
 }
 

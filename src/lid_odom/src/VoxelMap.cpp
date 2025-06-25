@@ -17,21 +17,21 @@ static const std::array<Voxel, 27> voxel_shifts{
 
 namespace cloud{
   void VoxelMap::addPoints(const std::vector<Eigen::Vector3d> &points){
-    double resolution_spacing_squared = voxel_resolution_*voxel_resolution_/max_points_per_voxel_;
+    double resolution_spacing = std::sqrt(voxel_resolution_*voxel_resolution_/max_points_per_voxel_);
     for(const auto &point : points){
       const Voxel voxel = PointToVoxel(point, voxel_resolution_);
       auto query = map_.find(voxel);
       if(query == map_.end()){
         std::vector<Eigen::Vector3d> vec;
         vec.reserve(max_points_per_voxel_);
-        vec.emplace_back(point);
+        vec.push_back(point);
         map_.insert({voxel,std::move(vec)});
       }else{
         auto &voxel_data = query->second;
         if(voxel_data.size() == max_points_per_voxel_ || 
          std::any_of(voxel_data.begin(), voxel_data.end(),
-         [&](const auto &existing_point){return (existing_point - point).squaredNorm()
-          < resolution_spacing_squared;})){
+         [&](const auto &existing_point){return (existing_point - point).norm()
+          < resolution_spacing;})){
           continue;
         }else{
           voxel_data.emplace_back(point);

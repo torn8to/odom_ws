@@ -18,6 +18,7 @@ class VoxelMap {
 
     inline void clear() { map_.clear(); }
     inline bool empty() const { return map_.empty(); }
+    inline size_t size() const { return map_.size(); }
     void addPoints(const std::vector<Eigen::Vector3d> &points);
     std::vector<Eigen::Vector3d> removeFarPoints(const std::vector<Eigen::Vector3d> &cloud);
     std::vector<Eigen::Vector3d> transform_cloud(const std::vector<Eigen::Vector3d> &points, const Sophus::SE3d &transform);
