@@ -16,6 +16,7 @@
   <depend>rosbag2_cpp</depend>
   <depend>rviz2</depend>
   <depend>trailblazer_description</depend>
+  <depend>phasma_description</depend>
   <depend>robot_state_publisher</depend>
   <depend>joint_state_publisher</depend>
   <depend>xacro</depend>

@@ -18,6 +18,7 @@ find_package(tf2_ros REQUIRED)
 # Install Python scripts
 install(PROGRAMS
   src/odom_to_tf_node.py
+  src/odom_to_path.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

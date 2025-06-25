@@ -45,7 +45,7 @@ def generate_launch_description():
     
     rviz_config_arg = DeclareLaunchArgument(
         'rviz_config',
-        default_value=os.path.join(pkg_dir, 'config', 'odom_visualization.rviz'),
+        default_value=os.path.join(pkg_dir, 'config', 'lid_visualization.rviz'),
         description='Path to the RViz configuration file'
     )
     
@@ -81,15 +81,42 @@ def generate_launch_description():
 
     lidar_odom_node = Node(package="lid_odom",
                     executable='lid_odom_node',
-                    ouput="screen")
+                    output="screen",
+                    #prefix=['xterm -e valgrind --tool=callgrind'],
+                    parameters=[{'publish_transform': True}],
+                    remappings=[('/points', '/rslidar_points')])
+    
+    # Add odom to path node for visualizing the odometry path
+    odom_to_path_node = Node(
+        package='odom_trail_blazer_demos',
+        executable='odom_to_path.py',
+        name='odom_to_path_node',
+        output='screen',
+        parameters=[{
+            'odom_topic': '/lid_odom',
+            'path_topic': '/lid_odom_path',
+            'frame_id': 'lid_odom',
+            'max_path_length': 100,
+            'use_sim_time': use_sim_time
+        }]
+    )
 
-    map_to_odom = Node(
+    map_to_lidar_odom = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         name='static_transform_publisher',
         arguments=['0', '0', '0', '0', '0', '0', 'map', 'lid_odom'],
         output='screen'
     )
+
+    map_to_odom = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='static_transform_publisher',
+        arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom'],
+        output='screen'
+    )
+
 
     return LaunchDescription([
         bag_file_arg,
@@ -98,7 +125,9 @@ def generate_launch_description():
         rviz_config_arg,
         robot_state_publisher_node,
         lidar_odom_node,
+        odom_to_path_node,
         bag_play_w_delay,
+        map_to_lidar_odom,
         map_to_odom,
         rviz_node
     ])

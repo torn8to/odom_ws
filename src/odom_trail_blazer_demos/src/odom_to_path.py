@@ -14,23 +14,19 @@ class OdomToPathNode(Node):
     def __init__(self):
         super().__init__('odom_to_path_node')
         
-        # Declare parameters
-        self.declare_parameter('odom_topic', '/odom')
+        self.declare_parameter('odom_topic', '/lid_odom')
         self.declare_parameter('path_topic', '/path')
-        self.declare_parameter('frame_id', 'odom')
+        self.declare_parameter('frame_id', 'lid_odom')
         self.declare_parameter('max_path_length', 100)  # Maximum number of poses to keep in path
         
-        # Get parameters
         self.odom_topic = self.get_parameter('odom_topic').value
         self.path_topic = self.get_parameter('path_topic').value
         self.frame_id = self.get_parameter('frame_id').value
         self.max_path_length = self.get_parameter('max_path_length').value
         
-        # Initialize path message
         self.path = Path()
         self.path.header.frame_id = self.frame_id
         
-        # Create publisher for path
         self.path_publisher = self.create_publisher(
             Path,
             self.path_topic,
@@ -51,22 +47,14 @@ class OdomToPathNode(Node):
         """
         Callback function for odometry messages
         """
-        # Create pose stamped from odometry
         pose_stamped = PoseStamped()
         pose_stamped.header = msg.header
         pose_stamped.pose = msg.pose.pose
-        
-        # Add pose to path
         self.path.poses.append(pose_stamped)
-        
-        # Limit path length if needed
         if len(self.path.poses) > self.max_path_length:
             self.path.poses = self.path.poses[-self.max_path_length:]
         
-        # Update path header timestamp
         self.path.header.stamp = self.get_clock().now().to_msg()
-        
-        # Publish path
         self.path_publisher.publish(self.path)
 
 
