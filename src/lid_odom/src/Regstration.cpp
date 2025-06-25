@@ -4,7 +4,6 @@
 #include"Registration.hpp"
 #include "VoxelMap.hpp"
 #include "PointToVoxel.hpp"
-#include <rclcpp/rclcpp.hpp>
 
 #include <tbb/blocked_range.h>
 #include <tbb/concurrent_vector.h>
@@ -111,7 +110,6 @@ Registration::Registration(int num_iterations, double convergence, int num_threa
           num_threads_(num_threads > 0 ? num_threads : tbb::this_task_arena::max_concurrency()){
     static const auto tbb_control_settings = tbb::global_control(
         tbb::global_control::max_allowed_parallelism, static_cast<size_t>(num_threads_));
-        RCLCPP_INFO(rclcpp::get_logger("lidar_odometry_mapping"), "Number of threads: %d", num_threads_);
   }
 
 
@@ -136,6 +134,5 @@ Sophus::SE3d Registration::alignPointsToMap(const std::vector<Eigen::Vector3d> &
     num_iterations = j;
     if (dx.norm() < convergence_) break;
   }
-    RCLCPP_INFO(rclcpp::get_logger("lidar_odometry_mapping"), "ICP converged in %d iterations", num_iterations + 1);
   return T_icp * initial_guess;
 }

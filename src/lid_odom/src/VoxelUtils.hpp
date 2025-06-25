@@ -25,7 +25,6 @@ std::vector<Eigen::Vector3d> voxelDownsample(std::vector<Eigen::Vector3d> &cloud
     for (const auto& kv : voxel_filter) {
         pruned_cloud.push_back(kv.second);
     }
-    RCLCPP_INFO(rclcpp::get_logger("lidar_odometry_mapping"),"Voxel downsampled cloud: %zu -> %zu points", cloud.size(), pruned_cloud.size());
     return pruned_cloud;
 }
 } // namespace cloud

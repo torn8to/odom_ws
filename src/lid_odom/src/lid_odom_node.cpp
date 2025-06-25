@@ -76,7 +76,6 @@ public:
     map_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("voxel_map", 10);
     cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("cloud", 10);
     RCLCPP_INFO(get_logger(),"Lidar Odometry Node initialized");
-
   }
 
 private:
@@ -133,7 +132,6 @@ private:
   void pointCloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
   {
     std::vector<Eigen::Vector3d> points = cloud::convertMsgToCloud(msg);
-    RCLCPP_INFO(get_logger(), "Received point cloud with %zu points", points.size());
     if(!lidar_pose_acquired){
       RCLCPP_WARN(get_logger(), "Lidar pose not acquired trying to reacquire");
       try{
@@ -142,42 +140,9 @@ private:
         lidar_pose_rel_to_base_ = tf2::transformToSophus(transform_stamped);
         lidar_pose_acquired = true;
         
-        // Print the acquired transform
-        RCLCPP_INFO(get_logger(), "Acquired transform from %s to %s:", 
-                   base_frame_id_.c_str(), lidar_link_id_.c_str());
-        RCLCPP_INFO(get_logger(), "Translation: [%f, %f, %f]", 
-                   transform_stamped.transform.translation.x,
-                   transform_stamped.transform.translation.y,
-                   transform_stamped.transform.translation.z);
-        RCLCPP_INFO(get_logger(), "Rotation: [%f, %f, %f, %f]", 
-                   transform_stamped.transform.rotation.x,
-                   transform_stamped.transform.rotation.y,
-                   transform_stamped.transform.rotation.z,
-                   transform_stamped.transform.rotation.w);
-        
-        // Print Sophus frame
-        RCLCPP_INFO(get_logger(), "Sophus frame - Translation: [%f, %f, %f]", 
-                   lidar_pose_rel_to_base_.translation().x(),
-                   lidar_pose_rel_to_base_.translation().y(),
-                   lidar_pose_rel_to_base_.translation().z());
-        RCLCPP_INFO(get_logger(), "Sophus frame - Rotation (quaternion): [%f, %f, %f, %f]", 
-                   lidar_pose_rel_to_base_.unit_quaternion().x(),
-                   lidar_pose_rel_to_base_.unit_quaternion().y(),
-                   lidar_pose_rel_to_base_.unit_quaternion().z(),
-                   lidar_pose_rel_to_base_.unit_quaternion().w());
-
-      // Create a test point at (1,1,1)
       Eigen::Vector3d test_point(1.0, 1.0, 1.0);
-      
-      // Transform the point using the lidar pose
       Eigen::Vector3d transformed_point = lidar_pose_rel_to_base_ * test_point;
       
-      // Print the original and transformed points
-      RCLCPP_INFO(get_logger(), "Original test point: [%f, %f, %f]", 
-                 test_point.x(), test_point.y(), test_point.z());
-      RCLCPP_INFO(get_logger(), "Transformed test point: [%f, %f, %f]", 
-                 transformed_point.x(), transformed_point.y(), transformed_point.z());
-
       }
       catch(const std::exception & e){
         RCLCPP_ERROR(get_logger(), "Failed to lookup transform from %s to %s: %s", base_frame_id_.c_str(), lidar_link_id_.c_str(), e.what());\
@@ -203,7 +168,6 @@ private:
   {
     if(!pipeline_->mapEmpty()){
     std::vector<Eigen::Vector3d> map  = pipeline_->getMap();
-    RCLCPP_INFO(get_logger(), "Publishing map with %zu points", map.size());
     sensor_msgs::msg::PointCloud2::SharedPtr map_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
     map_msg->header.stamp = this->now();
     map_msg->header.frame_id = odom_frame_id_;
@@ -215,7 +179,6 @@ private:
     cloud_msg->header.frame_id = odom_frame_id_;
     cloud::convertCloudToMsg(cloud, cloud_msg);
     cloud_pub_->publish(*cloud_msg);
-    RCLCPP_INFO(get_logger(), "Map published successfully");
   }
 
 
@@ -258,12 +221,6 @@ private:
       transform_stamped.header.frame_id = odom_frame_id_;
       transform_stamped.child_frame_id = child_frame_id_;
       transform_stamped.header.stamp = this->now();
-      RCLCPP_INFO(get_logger(), "Transform: frame_id=%s, child_frame_id=%s, x=%.3f, y=%.3f, z=%.3f", 
-                  transform_stamped.header.frame_id.c_str(), 
-                  transform_stamped.child_frame_id.c_str(),
-                  transform_stamped.transform.translation.x,
-                  transform_stamped.transform.translation.y,
-                  transform_stamped.transform.translation.z);
       tf_broadcaster_->sendTransform(transform_stamped);
     }
   }
