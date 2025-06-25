@@ -23,6 +23,8 @@ def generate_launch_description():
     use_rviz = LaunchConfiguration('use_rviz')
     use_sim_time = LaunchConfiguration('use_sim_time')
 
+    lidar_odom_param_file = LaunchConfiguration('lidar_param_file')
+
     rviz_config = LaunchConfiguration('rviz_config')
 
     use_sim_time_arg = DeclareLaunchArgument(
@@ -41,6 +43,11 @@ def generate_launch_description():
         'use_rviz',
         default_value='true',
         description='Whether to start RViz'
+    ) 
+    lidar_param_file_arg = DeclareLaunchArgument(
+        'lidar_param_file',
+        default_value=os.path.join(pkg_dir, 'config', 'bot_odom_lidar.yaml'),
+        description='Path to the lidar odometry parameter file'
     )
     
     rviz_config_arg = DeclareLaunchArgument(
@@ -83,7 +90,7 @@ def generate_launch_description():
                     executable='lid_odom_node',
                     output="screen",
                     #prefix=['xterm -e valgrind --tool=callgrind'],
-                    parameters=[{'publish_transform': True}],
+                    parameters=[lidar_odom_param_file],
                     remappings=[('/points', '/rslidar_points')])
     
     # Add odom to path node for visualizing the odometry path
@@ -122,6 +129,7 @@ def generate_launch_description():
         bag_file_arg,
         use_rviz_arg,
         use_sim_time_arg,
+        lidar_param_file_arg,
         rviz_config_arg,
         robot_state_publisher_node,
         lidar_odom_node,
