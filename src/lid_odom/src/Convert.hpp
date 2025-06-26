@@ -64,5 +64,15 @@ namespace cloud {
       *z_iter = static_cast<float>(points[i].z());
     }
   }
+
+  std::vector<double> extractTimestampsFromMsg(sensor_msgs::msg::PointCloud2::SharedPtr cloud_msg){
+    std::vector<double> timestamps;
+    timestamps.reserve(cloud_msg->height * cloud_msg->width);
+    sensor_msgs::PointCloud2ConstIterator<double> time_iter(*cloud_msg, "timestamp");
+    for(; x_iter != time_iter.end(); ++time_iter) {
+      timestamps.push_back(static_cast<double>(*time_iter));
+    }
+  }
+  return timestamps;
 } // namespace cloud
 
