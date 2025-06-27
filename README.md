@@ -6,7 +6,9 @@ requires oneapi TBB, eigen, and sophus outside of ros2
 
 ## TODO
 - [x] IMU ODOM
-- [x] lid_odom working in  near real time 
+- [x] lid_odom working in  near real time
+- [ ] scent the lidar odometry with another odometry source to improve performance and its ability to recover (current focus)
+- [ ] python bindings with cython to enable an augmented random search for lidar_odometry (refactor)
 - [ ] lidar with pose graph optimization
 
 
