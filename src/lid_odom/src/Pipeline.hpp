@@ -46,11 +46,15 @@ public:
    * It first performs a voxelization of the new cloud and then performs a nearest neighbor search
    * to find the closest points in the voxel map.
    *
-   * @param update_cloud The new cloud to update odometry
-   * @param update_pose The current pose of the robot
-   * @return The updated pose of the robot
+   * @param cloud The new cloud to update odometry
+   * @param external_guess External pose guess (optional)
+   * @param use_external_guess Whether to use the external pose guess (optional)
+   * @return A tuple containing the updated pose and the voxelized cloud
    */
-  std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> odometryUpdate(std::vector<Eigen::Vector3d> &cloud);
+  std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> odometryUpdate(
+      std::vector<Eigen::Vector3d> &cloud,
+      const Sophus::SE3d &external_guess = Sophus::SE3d(),
+      bool use_external_guess = false);
 
 
   /**

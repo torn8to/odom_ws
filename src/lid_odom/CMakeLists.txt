@@ -3,7 +3,7 @@ project(lid_odom)
 
 
 add_compile_options(-O3)
-add_compile_options(-g)
+#add_compile_options(-g)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -30,7 +30,7 @@ find_package(TBB REQUIRED)
 # Create the library
 add_library(${PROJECT_NAME}_lib SHARED
   src/Pipeline.cpp
-  src/Regstration.cpp
+  src/Registration.cpp
   src/VoxelMap.cpp
 )
 
@@ -70,11 +70,13 @@ ament_target_dependencies(${PROJECT_NAME}_node
 
 # Create the scented lidar odometry node
 add_executable(lidar_odom_scented_node src/lidar_odom_scented.cpp)
+target_link_libraries(lidar_odom_scented_node ${PROJECT_NAME}_lib)
 ament_target_dependencies(lidar_odom_scented_node
   rclcpp
   sensor_msgs
   nav_msgs
   geometry_msgs
+  sensor_msgs
   tf2_ros
   tf2_eigen
 )

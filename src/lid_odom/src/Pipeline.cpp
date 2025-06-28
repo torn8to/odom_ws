@@ -24,33 +24,35 @@ Pipeline::~Pipeline() {
 }
 
 
-std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> Pipeline::odometryUpdate(std::vector<Eigen::Vector3d> &cloud){
-  // Create registration object for point cloud alignment down 
-  // sample via odom and downsample via mapping to create
-  // run alignment with odometry downsampling and update via 
+std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> Pipeline::odometryUpdate(std::vector<Eigen::Vector3d> &cloud,
+                                           const Sophus::SE3d &external_guess,
+                                           bool use_external_guess){
   std::vector<Eigen::Vector3d> cloud_voxel_odom;
-if (odom_voxel_downsample_){
-  cloud_voxel_odom = voxelDownsample(cloud, max_distance_ / voxel_factor_ * voxel_resolution_beta_);
-}
-else{
-  cloud_voxel_odom = cloud;
-}
-
+  if (odom_voxel_downsample_){
+    cloud_voxel_odom = voxelDownsample(cloud, max_distance_ / voxel_factor_ * voxel_resolution_beta_);
+  }
+  else{
+    cloud_voxel_odom = cloud;
+  }
+  Sophus::SE3d initial_guess;
   std::vector<Eigen::Vector3d> cloud_voxel_mapping = voxelDownsample(cloud,max_distance_ / voxel_factor_ * voxel_resolution_alpha_);
-   
 
+  if (use_external_guess){
+    initial_guess = external_guess;
+  }else{
+    initial_guess = position(); 
+  }
 
-  auto initial_guess = pose_diff_ * position();
   const double sigma = threshold.computeThreshold();
 
   Sophus::SE3d new_position = registration_.alignPointsToMap(
     cloud_voxel_odom,
     voxel_map_,
-    position(),//initial_guess,
+    initial_guess,
     3.0 * sigma,
     sigma);
 
-  pose_diff_ = initial_guess.inverse() * new_position;
+  pose_diff_ = new_position * position().inverse();
   
   threshold.updateModelDeviation(pose_diff_);
   // Convert matrices to strings for logging

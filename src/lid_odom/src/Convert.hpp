@@ -103,8 +103,8 @@ namespace cloud {
     Eigen::Vector3d linear_velocity(
       odom_msg->twist.twist.linear.x,
       odom_msg->twist.twist.linear.y,
-      odom_msg->twist.twist.linear.z,
-      )
+      odom_msg->twist.twist.linear.z
+    );
 
 
     Eigen::Vector3d angular_velocity(
@@ -117,7 +117,7 @@ namespace cloud {
     double timestamp = static_cast<double>(odom_msg->header.stamp.sec) + 
                       static_cast<double>(odom_msg->header.stamp.nanosec) * 1e-9;
     
-    return std::make_tuple(pose,linear_velocity, linear_velocity, angular_velocity, timestamp);
+    return std::make_tuple(pose, linear_velocity, angular_velocity, timestamp);
   }
 
 } // namespace cloud
