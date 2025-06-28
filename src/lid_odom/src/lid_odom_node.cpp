@@ -79,55 +79,6 @@ public:
   }
 
 private:
-  rcl_interfaces::msg::SetParametersResult handleParameterCallback(const std::vector<rclcpp::Parameter> & parameters){
-    rcl_interfaces::msg::SetParametersResult result;
-    for(const auto & param: parameters){
-      if(param.get_name() == "base_frame_id_"){
-        base_frame_id_ = param.as_string();
-        result.successful = "true";
-        result.reason = "valid changeable parameter";
-        continue;
-      }
-      if(param.get_name() == "lidar_link"){
-        lidar_link_id_ = param.as_string();
-        lidar_pose_acquired = false;
-        result.successful = "true";
-        result.reason = "valid changeable parameter";
-        continue;
-      }
-      if(param.get_name() == "odom_frame"){
-        odom_frame_id_ = param.as_string();
-        result.successful = "true";
-        result.reason = "valid changeable parameter";
-        continue;
-      }
-      if(param.get_name() == "child_frame_id"){
-        child_frame_id_ = param.as_string();
-        result.successful = "true";
-        result.reason = "valid changeable parameter";
-        continue;
-      }
-      if(param.get_name() == "debug"){
-        debug_ = param.as_bool();
-        result.successful = "true";
-        result.reason = "valid changeable parameter";
-        continue;
-      }
-      if(param.get_name() == "publish_transform"){
-        publish_transform_ = param.as_bool();
-        result.successful = "true";
-        result.reason = "valid changeable parameter";
-        continue;
-      }
-      if(param.get_name() == "max_distance"){
-        config.max_distance = param.as_double();
-        result.successful = "true";
-        result.reason = "valid changeable parameter";
-        continue;
-      }
-    }
-    return result;
-  }
 
   void pointCloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
   {
@@ -139,10 +90,6 @@ private:
                                                            base_frame_id_, tf2::TimePointZero);
         lidar_pose_rel_to_base_ = tf2::transformToSophus(transform_stamped);
         lidar_pose_acquired = true;
-        
-      Eigen::Vector3d test_point(1.0, 1.0, 1.0);
-      Eigen::Vector3d transformed_point = lidar_pose_rel_to_base_ * test_point;
-      
       }
       catch(const std::exception & e){
         RCLCPP_ERROR(get_logger(), "Failed to lookup transform from %s to %s: %s", base_frame_id_.c_str(), lidar_link_id_.c_str(), e.what());\

@@ -1,7 +1,7 @@
 #include <cassert>
 #include <vector>
 #include <algorithm>
-#include <sophus/se3.h>
+#include <sophus/se3.hpp>
 #include <eigen/Core>
 
 namespace cloud{

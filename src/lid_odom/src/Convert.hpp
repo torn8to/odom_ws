@@ -5,6 +5,9 @@
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <vector>
 #include <Eigen/Core>
+#include <nav_msgs/msg/odometry.hpp>
+#include <sophus/se3.hpp>
+#include <tuple>
 
 namespace cloud {
   std::vector<Eigen::Vector3d> convertMsgToCloud(sensor_msgs::msg::PointCloud2::SharedPtr cloud_msg) {
@@ -65,14 +68,57 @@ namespace cloud {
     }
   }
 
-  std::vector<double> extractTimestampsFromMsg(sensor_msgs::msg::PointCloud2::SharedPtr cloud_msg){
+  std::vector<double> extractTimestampsFromCloudMsg(sensor_msgs::msg::PointCloud2::SharedPtr cloud_msg) {
     std::vector<double> timestamps;
     timestamps.reserve(cloud_msg->height * cloud_msg->width);
     sensor_msgs::PointCloud2ConstIterator<double> time_iter(*cloud_msg, "timestamp");
-    for(; x_iter != time_iter.end(); ++time_iter) {
+    for(; time_iter != time_iter.end(); ++time_iter) {
       timestamps.push_back(static_cast<double>(*time_iter));
     }
+    return timestamps;
   }
-  return timestamps;
+
+  /**
+   * @brief Extracts odometry data from a nav_msgs::msg::Odometry message
+   * @param odom_msg The odometry message to extract data from
+   * @return A tuple containing the pose as Sophus::SE3d, linear_velocity, rotational velocity as Eigen::Vector3d, and timestamp as double
+   */
+  std::tuple<Sophus::SE3d, Eigen::Vector3d, Eigen::Vector3d, double> extractOdometryData(nav_msgs::msg::Odometry::SharedPtr odom_msg) {
+    Eigen::Vector3d translation(
+      odom_msg->pose.pose.position.x,
+      odom_msg->pose.pose.position.y,
+      odom_msg->pose.pose.position.z
+    );
+    
+    Eigen::Quaterniond rotation(
+      odom_msg->pose.pose.orientation.w,
+      odom_msg->pose.pose.orientation.x,
+      odom_msg->pose.pose.orientation.y,
+      odom_msg->pose.pose.orientation.z
+    );
+    
+    // Create Sophus::SE3d from translation and rotation
+    Sophus::SE3d pose(Sophus::SO3d(rotation), translation);
+    
+    Eigen::Vector3d linear_velocity(
+      odom_msg->twist.twist.linear.x,
+      odom_msg->twist.twist.linear.y,
+      odom_msg->twist.twist.linear.z,
+      )
+
+
+    Eigen::Vector3d angular_velocity(
+      odom_msg->twist.twist.angular.x,
+      odom_msg->twist.twist.angular.y,
+      odom_msg->twist.twist.angular.z
+    );
+    
+    // Extract timestamp
+    double timestamp = static_cast<double>(odom_msg->header.stamp.sec) + 
+                      static_cast<double>(odom_msg->header.stamp.nanosec) * 1e-9;
+    
+    return std::make_tuple(pose,linear_velocity, linear_velocity, angular_velocity, timestamp);
+  }
+
 } // namespace cloud
 

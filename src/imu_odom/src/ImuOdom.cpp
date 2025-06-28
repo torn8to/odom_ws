@@ -12,7 +12,7 @@
 namespace tf2 {
   void fromMsg(const geometry_msgs::msg::Transform& msg, Sophus::SE3d& tf_mat) {
     tf_mat = Sophus::SE3d(
-      Sophus::SO3D(Eigen::Quaterniond(msg.rotation.w, msg.rotation.x, msg.rotation.y, msg.rotation.z)),
+      Sophus::SO3d(Eigen::Quaterniond(msg.rotation.w, msg.rotation.x, msg.rotation.y, msg.rotation.z)),
       Eigen::Vector3d(msg.translation.x, msg.translation.y, msg.translation.z)
     );
   }
@@ -51,6 +51,7 @@ ImuOdom::ImuOdom()
   declare_parameter("flip_y_axis",false);
   declare_parameter("flip_z_axis",false);
   declare_parameter("pin_z_axis",false);
+
 
   pin_z = get_parameter("pin_z_axis").as_bool();
 
@@ -119,12 +120,16 @@ void ImuOdom::integrateImu(const sensor_msgs::msg::Imu::SharedPtr msg){
   double dt = (current_time - last_time_).seconds(); 
   Eigen::Vector3d delta_angle = dt * (processed_angular_velocity + angular_velocity_)/2.0;
   angular_velocity_ = processed_angular_velocity;
+
+
   Sophus::SO3d delta_half_rotation = Sophus::SO3d::exp(delta_angle / 2.0);
-  transform_.so3() = delta_half_rotation * transform_.so3() ;
+
+
+  transform_.so3() = transform_.so3() * delta_half_rotation;
   Eigen::Vector3d linear_velocity_delta = dt * (orientation_corrected_acceleration);
   transform_.translation() = (transform_.translation() + (transform_.rotationMatrix() * (dt * (linear_velocity_ + linear_velocity_delta/2.0))));
   linear_velocity_ += linear_velocity_delta;
-  transform_.so3() = delta_half_rotation * transform_.so3() ;
+  transform_.so3() = transform_.so3() * delta_half_rotation;
   last_time_ = current_time;
   publishOdomMessage(current_time);
   publishTransform(current_time);
@@ -185,17 +190,13 @@ void ImuOdom::publishTransform(const rclcpp::Time& current_time) {
   tf_msg.header.frame_id = frame_id_;
   tf_msg.child_frame_id = child_frame_id_;
 
-  // Set translation
   tf_msg.transform.translation.x = transform_.translation().x();
   tf_msg.transform.translation.y = transform_.translation().y();
   tf_msg.transform.translation.z = !this->pin_z ? transform_.translation().z() : 0;
 
-  // Get the quaternion directly from the transform's rotation part
-  // This ensures we get the proper orientation representation
   Eigen::Quaterniond quat = transform_.so3().unit_quaternion();
-  quat.normalize() 
+  quat.normalize();
 
-  // Set rotation
   tf_msg.transform.rotation.x = quat.x();
   tf_msg.transform.rotation.y = quat.y();
   tf_msg.transform.rotation.z = quat.z();

@@ -68,6 +68,17 @@ ament_target_dependencies(${PROJECT_NAME}_node
   tf2_eigen
 )
 
+# Create the scented lidar odometry node
+add_executable(lidar_odom_scented_node src/lidar_odom_scented.cpp)
+ament_target_dependencies(lidar_odom_scented_node
+  rclcpp
+  sensor_msgs
+  nav_msgs
+  geometry_msgs
+  tf2_ros
+  tf2_eigen
+)
+
 # Install headers
 install(
   DIRECTORY include/ src/
@@ -75,9 +86,9 @@ install(
   FILES_MATCHING PATTERN "*.hpp"
 )
 
-# Install library
+# Install library and executables
 install(
-  TARGETS ${PROJECT_NAME}_lib ${PROJECT_NAME}_node
+  TARGETS ${PROJECT_NAME}_lib ${PROJECT_NAME}_node lidar_odom_scented_node
   EXPORT export_${PROJECT_NAME}
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
