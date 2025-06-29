@@ -55,16 +55,8 @@ std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> Pipeline::odometryUpdate(
   pose_diff_ = new_position * position().inverse();
   
   threshold.updateModelDeviation(pose_diff_);
-  // Convert matrices to strings for logging
-  std::stringstream pose_diff_ss;
-  pose_diff_ss << pose_diff_.matrix();
-  
-  std::stringstream new_pos_ss;
-  new_pos_ss << new_position.matrix();
-
   std::vector<Eigen::Vector3d> cloud_voxel_mapping_transformed = voxel_map_.transform_cloud(cloud_voxel_mapping, new_position);
   voxel_map_.addPoints(cloud_voxel_mapping_transformed);
-
   updatePosition(new_position);
   return std::make_tuple(new_position, cloud_voxel_mapping);
 }
