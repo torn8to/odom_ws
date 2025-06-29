@@ -95,7 +95,7 @@ private:
             }
             catch(const std::exception & e){
                 RCLCPP_ERROR(get_logger(), "Failed to lookup transform from %s to %s: %s", 
-                base_frame_.c_str(), lidar_frame_.c_str(), e.what());\
+                base_frame_.c_str(), lidar_frame_.c_str(), e.what());
                 return;
             }
         }// end of if
