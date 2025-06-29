@@ -14,9 +14,9 @@
 
 #include <sophus/se3.hpp>
 
-#include "Pipeline.hpp"
-#include "Convert.hpp"
-#include "tf2_sophus.hpp"
+#include "lid_odom/Pipeline.hpp"
+#include "lid_odom/Convert.hpp"
+#include "lid_odom/tf2_sophus.hpp"
 
 namespace lid_odom {
 

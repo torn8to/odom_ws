@@ -37,7 +37,6 @@ add_library(${PROJECT_NAME}_lib SHARED
 target_compile_features(${PROJECT_NAME}_lib PUBLIC cxx_std_17)
 
 target_include_directories(${PROJECT_NAME}_lib PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
@@ -58,7 +57,7 @@ target_link_libraries(${PROJECT_NAME}_lib
 )
 
 # Create the executable node
-add_executable(${PROJECT_NAME}_node src/lid_odom_node.cpp)
+add_executable(${PROJECT_NAME}_node src/node/lid_odom_node.cpp)
 target_link_libraries(${PROJECT_NAME}_node ${PROJECT_NAME}_lib)
 ament_target_dependencies(${PROJECT_NAME}_node
   rclcpp
@@ -69,7 +68,7 @@ ament_target_dependencies(${PROJECT_NAME}_node
 )
 
 # Create the scented lidar odometry node
-add_executable(lidar_odom_scented_node src/lidar_odom_scented.cpp)
+add_executable(lidar_odom_scented_node src/node/lidar_odom_scented.cpp)
 target_link_libraries(lidar_odom_scented_node ${PROJECT_NAME}_lib)
 ament_target_dependencies(lidar_odom_scented_node
   rclcpp
@@ -83,7 +82,7 @@ ament_target_dependencies(lidar_odom_scented_node
 
 # Install headers
 install(
-  DIRECTORY include/ src/
+  DIRECTORY include/
   DESTINATION include
   FILES_MATCHING PATTERN "*.hpp"
 )

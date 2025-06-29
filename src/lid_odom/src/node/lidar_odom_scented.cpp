@@ -8,10 +8,10 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <sophus/se3.hpp>
-#include "Convert.hpp"
-#include "Pipeline.hpp"
-#include "tf2_sophus.hpp"
-#include "PointUtils.hpp"
+#include "lid_odom/Convert.hpp"
+#include "lid_odom/Pipeline.hpp"
+#include "lid_odom/tf2_sophus.hpp"
+#include "lid_odom/PointUtils.hpp"
 
 #include <vector>
 #include <tuple>
@@ -59,21 +59,20 @@ public:
         odom_callback_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         pcl_callback_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
 
-        odom_publisher_ = create_publisher<nav_msgs::msg::Odometry>("LidarOdometrty", 10);
-        cloud_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>("Map", 10);
+        odom_publisher_ = create_publisher<nav_msgs::msg::Odometry>("/lidar_odometry", 10);
+        cloud_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>("/map", 10);
 
         cloud_subscriber_ = create_subscription<sensor_msgs::msg::PointCloud2>(
-            "points", 10, 
+            "/points_in", 10, 
             std::bind(&LidarOdomScented::cloudCallback, this, std::placeholders::_1));
         
         odom_subscriber_ = create_subscription<nav_msgs::msg::Odometry>(
-            "odometry", 10,
+            "/odometry_in", 10,
             std::bind(&LidarOdomScented::odomCallback, this, std::placeholders::_1));
 
         tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
         buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*buffer_);
-
         RCLCPP_INFO(get_logger(), "LidarOdomScented node has been initialized");
     }
 
@@ -92,6 +91,10 @@ private:
                                                         tf2::TimePointZero);
                 lidar_pose_rel_to_base_ = tf2::transformToSophus(transform_stamped);
                 lidar_pose_acquired_ = true;
+                RCLCPP_INFO(get_logger(), "Lidar pose relative to base: Position: [%.3f, %.3f, %.3f], Quaternion: [%.3f, %.3f, %.3f, %.3f]", 
+                           lidar_pose_rel_to_base_.translation().x(), lidar_pose_rel_to_base_.translation().y(), lidar_pose_rel_to_base_.translation().z(),
+                           lidar_pose_rel_to_base_.unit_quaternion().x(), lidar_pose_rel_to_base_.unit_quaternion().y(), 
+                           lidar_pose_rel_to_base_.unit_quaternion().z(), lidar_pose_rel_to_base_.unit_quaternion().w());
             }
             catch(const std::exception & e){
                 RCLCPP_ERROR(get_logger(), "Failed to lookup transform from %s to %s: %s", 
@@ -114,7 +117,13 @@ private:
         Sophus::SE3d new_pose = std::get<0>(odometry_update);
         odom_queue_mutex.lock();
         interweaved_pose = new_pose;
+        RCLCPP_INFO(get_logger(), "Interweaved pose - Position: [%.3f, %.3f, %.3f], Quaternion: [%.3f, %.3f, %.3f, %.3f]", 
+                   interweaved_pose.translation().x(), interweaved_pose.translation().y(), interweaved_pose.translation().z(),
+                   interweaved_pose.unit_quaternion().x(), interweaved_pose.unit_quaternion().y(), 
+                   interweaved_pose.unit_quaternion().z(), interweaved_pose.unit_quaternion().w());
         odom_queue_mutex.unlock();
+        publishOdometry();
+        publishCloud(cloud_publisher_, pipeline_->getMap());
     }
 
     void odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
@@ -126,7 +135,12 @@ private:
         odom_pose_differential = new_pose * last_odometry_pose.inverse();
         last_odometry_pose = new_pose;
         interweaved_pose = interweaved_pose * odom_pose_differential;
+        RCLCPP_INFO(get_logger(), "Interweaved pose - Position: [%.3f, %.3f, %.3f], Quaternion: [%.3f, %.3f, %.3f, %.3f]", 
+                   interweaved_pose.translation().x(), interweaved_pose.translation().y(), interweaved_pose.translation().z(),
+                   interweaved_pose.unit_quaternion().x(), interweaved_pose.unit_quaternion().y(), 
+                   interweaved_pose.unit_quaternion().z(), interweaved_pose.unit_quaternion().w());
         odom_queue_mutex.unlock();
+        publishOdometry();
     }
 
     void publishOdometry(){
@@ -175,7 +189,7 @@ private:
         odom_msg.twist.twist.angular.y = angular_velocity.y();
         odom_msg.twist.twist.angular.z = angular_velocity.z();
     
-        odom_publisher_->publish(odom_msg);
+        odom_publisher_->publish(std::move(odom_msg));
     
         if (publish_tf_) {
             publishTF(std::make_shared<nav_msgs::msg::Odometry>(odom_msg));
@@ -198,13 +212,14 @@ private:
     }
 
     void publishCloud(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &publisher,
-                      std::vector<Eigen::Vector3d> &cloud){
+                      const std::vector<Eigen::Vector3d> &cloud){
         sensor_msgs::msg::PointCloud2::SharedPtr cloud_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
         cloud_msg->header.frame_id = odom_frame_;
         cloud_msg->header.stamp = this->now();
         cloud::convertCloudToMsg(cloud, cloud_msg);
         publisher->publish(*cloud_msg);
     }
+
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_subscriber_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber_;
     
@@ -227,8 +242,8 @@ private:
     Sophus::SE3d interweaved_pose;
     Sophus::SE3d last_odometry_pose;
 
-    bool lidar_pose_acquired_;
-    Sophus::SE3d  lidar_pose_rel_to_base_;
+    bool lidar_pose_acquired_ =  false;
+    Sophus::SE3d lidar_pose_rel_to_base_;
 
     cloud::PipelineConfig config_;
     std::unique_ptr<cloud::Pipeline> pipeline_;
