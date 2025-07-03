@@ -100,7 +100,7 @@ private:
       RCLCPP_WARN(get_logger(), "Received empty point cloud, skipping");
       return;
     }
-    std::vector<Eigen::Vector3d>transformed_points = transformPointCloud(points, lidar_pose_rel_to_base_);
+    std::vector<Eigen::Vector3d>transformed_points = cloud::transformPoints(points, lidar_pose_rel_to_base_);
     std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> result = pipeline_->odometryUpdate(transformed_points);
     Sophus::SE3d updated_pose = std::get<0>(result);
     
@@ -129,17 +129,6 @@ private:
   }
 
 
-
-  std::vector<Eigen::Vector3d> transformPointCloud(const std::vector<Eigen::Vector3d> &points,
-                                                          const Sophus::SE3d &pose){
-    std::vector<Eigen::Vector3d> transformed_points;
-    transformed_points.reserve(points.size());
-    for(Eigen::Vector3d const &point: points){
-      transformed_points.push_back(pose * point);
-    }
-    return transformed_points;
-  }
-  
   
   void publishOdometry(const rclcpp::Time & timestamp, const Sophus::SE3d & pose)
   {

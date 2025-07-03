@@ -1,3 +1,5 @@
+#pragma once
+
 #include <tf2/utils.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <sophus/se3.hpp>

@@ -26,11 +26,6 @@ namespace{
 
 inline double square(double x) { return x * x; }
 
-void TransformPoints(const Sophus::SE3d &T, std::vector<Eigen::Vector3d> &points) {
-    std::transform(points.cbegin(), points.cend(), points.begin(),
-                   [&](const auto &point) { return T * point; });
-}
-
 Correspondences DataAssociation(const std::vector<Eigen::Vector3d> &points,
                                 const cloud::VoxelMap &voxel_map,
                                 const double max_correspondance_distance) {
@@ -118,8 +113,8 @@ Sophus::SE3d Registration::alignPointsToMap(const std::vector<Eigen::Vector3d> &
                                             const Sophus::SE3d &initial_guess,
                                             const double max_distance,
                                             const double kernel_scale){
-  std::vector<Eigen::Vector3d> source = points;
-  TransformPoints(initial_guess, source);
+  std::vector<Eigen::Vector3d> source;
+  source = cloud::transformPoints(source, initial_guess);
   int num_iterations;
   Sophus::SE3d T_icp = Sophus::SE3d();
   for (int j = 0; j < max_num_iterations_; ++j) {
@@ -129,7 +124,7 @@ Sophus::SE3d Registration::alignPointsToMap(const std::vector<Eigen::Vector3d> &
     const Eigen::Vector6d& JTr = linearSystem.second;
     const Eigen::Vector6d dx = JTJ.ldlt().solve(-JTr);
     const Sophus::SE3d estimation = Sophus::SE3d::exp(dx);
-    TransformPoints(estimation, source);
+    source = cloud::transformPoints(source, estimation);
     T_icp = estimation * T_icp;
     num_iterations = j;
     if (dx.norm() < convergence_) break;

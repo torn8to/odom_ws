@@ -1,5 +1,6 @@
 #include "lid_odom/Pipeline.hpp"
 #include "lid_odom/VoxelUtils.hpp"
+#include "lid_odom/PointUtils.hpp"
 #include <sstream>
 
 namespace cloud {
@@ -55,7 +56,7 @@ std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> Pipeline::odometryUpdate(
   pose_diff_ = new_position * position().inverse();
   
   threshold.updateModelDeviation(pose_diff_);
-  std::vector<Eigen::Vector3d> cloud_voxel_mapping_transformed = voxel_map_.transform_cloud(cloud_voxel_mapping, new_position);
+  std::vector<Eigen::Vector3d> cloud_voxel_mapping_transformed = cloud::transformPoints(cloud_voxel_mapping, new_position);
   voxel_map_.addPoints(cloud_voxel_mapping_transformed);
   updatePosition(new_position);
   return std::make_tuple(new_position, cloud_voxel_mapping);

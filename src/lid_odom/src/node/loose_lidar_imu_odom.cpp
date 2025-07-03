@@ -20,13 +20,13 @@
 #include <list>
 
 
-class LidarOdomScented : public rclcpp::Node
+class LooseLidarOdom : public rclcpp::Node
 {
 public:
-    LidarOdomScented() : Node("lidar_odom_scented"), last_imu_time_(0,0,RCL_ROS_TIME)
+    LooseLidarOdom() : Node("loose_lidar_imu_odom"), last_imu_time_(0,0,RCL_ROS_TIME)
     {
         declare_parameter("max_distance", 30.0);
-        declare_parameter("voxel_factor", 100.0);
+        declare_parameter("voxel_factor", 60);
         declare_parameter("voxel_resolution_alpha", 1.5);
         declare_parameter("voxel_resolution_beta", 0.5);
         declare_parameter("max_points_per_voxel", 27);
@@ -54,7 +54,6 @@ public:
         lidar_frame_ = get_parameter("lidar_frame").as_string();
         imu_frame_ = get_parameter("imu_frame").as_string();
         publish_tf_ = get_parameter("publish_tf").as_bool();
-        pin_z_ = get_parameter("pin_z_axis").as_bool();
         imu_buffer_size_ = get_parameter("imu_buffer_size").as_int();
 
         position_covariance_ = get_parameter("position_covariance").as_double();
@@ -82,36 +81,39 @@ public:
         
         pipeline_ = std::make_unique<cloud::Pipeline>(config_);
 
-        odom_callback_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         pcl_callback_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
         imu_callback_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+
+        rclcpp::SubscriptionOptions pcl_options;
+        pcl_options.callback_group = pcl_callback_group_;
+
+        rclcpp::SubscriptionOptions imu_options;
+        imu_options.callback_group = imu_callback_group_;
+
 
         odom_publisher_ = create_publisher<nav_msgs::msg::Odometry>("/lidar_odometry", 10);
         cloud_publisher_ = create_publisher<sensor_msgs::msg::PointCloud2>("/map", 10);
 
         cloud_subscriber_ = create_subscription<sensor_msgs::msg::PointCloud2>(
             "/points_in", 10, 
-            std::bind(&LidarOdomScented::cloudCallback, this, std::placeholders::_1));
+            std::bind(&LooseLidarOdom::cloudCallback, this, std::placeholders::_1),
+            pcl_options);
         
-        odom_subscriber_ = create_subscription<nav_msgs::msg::Odometry>(
-            "/odometry_in", 10,
-            std::bind(&LidarOdomScented::odomCallback, this, std::placeholders::_1));
-
         imu_subscriber_ = create_subscription<sensor_msgs::msg::Imu>(
             "/imu/data", 10,
-            std::bind(&LidarOdomScented::imuCallback, this, std::placeholders::_1));
+            std::bind(&LooseLidarOdom::imuCallback, this, std::placeholders::_1),
+            imu_options);
 
         tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
         buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*buffer_);
         
-        // Initialize transforms and vectors
         imu_pose_rel_to_base_ = Sophus::SE3d();
-        renormalize_imu_orientation_ = Sophus::SO3d();
         imu_transform_ = Sophus::SE3d();
         gravity_bias_ = Eigen::Vector3d(0, 0.0, -9.81);
         linear_velocity_ = Eigen::Vector3d(0.0, 0.0, 0.0);
         angular_velocity_ = Eigen::Vector3d(0.0, 0.0, 0.0);
+        imu_buffer_.resize(imu_buffer_size_);
         
         RCLCPP_INFO(get_logger(), "LidarOdomScented node has been initialized");
     }
@@ -129,11 +131,10 @@ private:
                     base_frame_,
                     tf2::TimePointZero, 
                     tf2::durationFromSec(0.5));
-                tf2::fromMsg(imu_transform.transform, imu_pose_rel_to_base_);
+                imu_pose_rel_to_base_ = tf2::transformToSophus(imu_transform);
                 RCLCPP_INFO(get_logger(), "Successfully got IMU transform from TF tree");
                 RCLCPP_INFO(get_logger(), "Transform frame: %s -> %s", imu_frame_.c_str(), base_frame_.c_str());
                 
-                // Print transform position and quaternion
                 RCLCPP_INFO(get_logger(), "Transform position: x=%.3f, y=%.3f, z=%.3f", 
                     imu_transform.transform.translation.x,
                     imu_transform.transform.translation.y,
@@ -156,9 +157,8 @@ private:
             return;
         }
 
-        Sophus::SE3d current_imu_pose = current_odometry_position  * imu_pose_rel_to_base_;
-        
-        // Convert IMU message to Eigen vectors
+        Sophus::SE3d current_imu_pose = interweaved_pose  * imu_pose_rel_to_base_;
+
         Eigen::Vector3d linear_acceleration(
             msg->linear_acceleration.x,
             msg->linear_acceleration.y,
@@ -176,19 +176,16 @@ private:
         angular_velocity_ = processed_angular_velocity;
 
         Sophus::SO3d delta_half_rotation = Sophus::SO3d::exp(delta_angle / 2.0);
-
         imu_transform_.so3() = imu_transform_.so3() * delta_half_rotation;
-        Eigen::Vector3d linear_velocity_delta = dt * (orientation_corrected_acceleration);
+        Eigen::Vector3d linear_velocity_delta = processed_acceleration * dt;
         imu_transform_.translation() = (imu_transform_.translation() + 
                                     (imu_transform_.rotationMatrix() * (dt * (linear_velocity_ + linear_velocity_delta/2.0))));
         linear_velocity_ += linear_velocity_delta;
         imu_transform_.so3() = imu_transform_.so3() * delta_half_rotation;
-        
         last_imu_time_ = current_time;
         
-        // Update the interweaved pose with IMU data
         imu_queue_mutex_.lock();
-        interweaved_pose = imu_transform_;
+        interweaved_pose = imu_pose_rel_to_base_.inverse() * imu_transform_;
         imu_queue_mutex_.unlock();
         
         publishOdometry();
@@ -196,12 +193,6 @@ private:
 
     // Subscriber callbacks
     void imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg) {
-        // Store the message in the buffer
-        if (imu_buffer_.size() >= imu_buffer_size_) {
-            imu_buffer_.pop_front();
-        }
-        imu_buffer_.push_back(*msg);
-        // Process the IMU data
         integrateImu(msg);
     }
     
@@ -253,32 +244,8 @@ private:
                    interweaved_pose.unit_quaternion().x(), interweaved_pose.unit_quaternion().y(), 
                    interweaved_pose.unit_quaternion().z(), interweaved_pose.unit_quaternion().w());
         imu_queue_mutex_.unlock();
-        
         publishOdometry();
         publishCloud(cloud_publisher_, pipeline_->getMap());
-    }
-
-    void imuCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
-    {
-        RCLCPP_INFO(get_logger(), "Received odometry message");
-        auto data_tuple = cloud::extractOdometryData(msg);
-        Sophus::SE3d new_pose = std::get<0>(data_tuple);
-        
-        odom_queue_mutex.lock();
-        odom_pose_differential = new_pose * last_odometry_pose.inverse();
-        last_odometry_pose = new_pose;
-        
-        // Combine with IMU data in the interweaved pose
-        imu_queue_mutex_.lock();
-        interweaved_pose = interweaved_pose * odom_pose_differential;
-        RCLCPP_INFO(get_logger(), "Interweaved pose - Position: [%.3f, %.3f, %.3f], Quaternion: [%.3f, %.3f, %.3f, %.3f]", 
-                   interweaved_pose.translation().x(), interweaved_pose.translation().y(), interweaved_pose.translation().z(),
-                   interweaved_pose.unit_quaternion().x(), interweaved_pose.unit_quaternion().y(), 
-                   interweaved_pose.unit_quaternion().z(), interweaved_pose.unit_quaternion().w());
-        imu_queue_mutex_.unlock();
-        
-        odom_queue_mutex.unlock();
-        publishOdometry();
     }
 
     void publishOdometry(){
@@ -294,7 +261,7 @@ private:
     
         odom_msg.pose.pose.position.x = position.x();
         odom_msg.pose.pose.position.y = position.y();
-        odom_msg.pose.pose.position.z = pin_z_ ? 0.0 : position.z();
+        odom_msg.pose.pose.position.z = position.z();
     
         odom_msg.pose.pose.orientation.x = orientation.x();
         odom_msg.pose.pose.orientation.y = orientation.y();
@@ -324,7 +291,7 @@ private:
         
         odom_msg.twist.twist.linear.x = linear_vel.x();
         odom_msg.twist.twist.linear.y = linear_vel.y();
-        odom_msg.twist.twist.linear.z = pin_z_ ? 0.0 : linear_vel.z();
+        odom_msg.twist.twist.linear.z = linear_vel.z();
         odom_msg.twist.twist.angular.x = angular_vel.x();
         odom_msg.twist.twist.angular.y = angular_vel.y();
         odom_msg.twist.twist.angular.z = angular_vel.z();
@@ -360,28 +327,22 @@ private:
         publisher->publish(*cloud_msg);
     }
 
-    // Subscribers
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_subscriber_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber_;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscriber_;
     
-    // Publishers
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_publisher_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_publisher_;
     
-    // Callback groups
-    rclcpp::CallbackGroup::SharedPtr odom_callback_group_; 
     rclcpp::CallbackGroup::SharedPtr pcl_callback_group_;
     rclcpp::CallbackGroup::SharedPtr imu_callback_group_;
 
-    // TF
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_{nullptr};
     std::unique_ptr<tf2_ros::Buffer> buffer_;
 
-    // IMU data
-    std::list<sensor_msgs::msg::Imu> imu_buffer_;
-    size_t imu_buffer_size_{100};
+    std::vector<std::tuple<Sophus::SE3d, double>> imu_buffer_;
+    size_t imu_buffer_size_{500};
     rclcpp::Time last_imu_time_;
     bool has_first_imu_message_{false};
     bool imu_transform_acquired_{false};
@@ -422,7 +383,7 @@ private:
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<LidarOdomScented>();
+    auto node = std::make_shared<LooseLidarOdom>();
     rclcpp::executors::MultiThreadedExecutor executor;
     executor.add_node(node);
     executor.spin();

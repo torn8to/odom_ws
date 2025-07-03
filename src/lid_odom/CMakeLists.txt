@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.8)
 project(lid_odom)
 
+set(CUDA_ENABLE FALSE)
 
 add_compile_options(-O3)
 #add_compile_options(-g)
@@ -15,6 +16,10 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 
 # find dependencies
+if(CUDA_ENABLE)
+  find_package(cuda REQUIRED) 
+endif()
+
 find_package(ament_cmake REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -31,8 +36,9 @@ find_package(TBB REQUIRED)
 add_library(${PROJECT_NAME}_lib SHARED
   src/Pipeline.cpp
   src/Registration.cpp
-  src/VoxelMap.cpp
-)
+  src/VoxelMap.cpp)
+
+
 
 target_compile_features(${PROJECT_NAME}_lib PUBLIC cxx_std_17)
 
@@ -80,6 +86,17 @@ ament_target_dependencies(lidar_odom_scented_node
   tf2_eigen
 )
 
+add_executable(loose_lidar_imu_node src/node/loose_lidar_imu_odom.cpp)
+target_link_libraries(loose_lidar_imu_node ${PROJECT_NAME}_lib)
+ament_target_dependencies(loose_lidar_imu_node
+  rclcpp
+  sensor_msgs
+  nav_msgs
+  geometry_msgs
+  sensor_msgs
+  tf2_ros
+  tf2_eigen)
+
 # Install headers
 install(
   DIRECTORY include/
@@ -89,7 +106,7 @@ install(
 
 # Install library and executables
 install(
-  TARGETS ${PROJECT_NAME}_lib ${PROJECT_NAME}_node lidar_odom_scented_node
+  TARGETS ${PROJECT_NAME}_lib ${PROJECT_NAME}_node lidar_odom_scented_node loose_lidar_imu_node
   EXPORT export_${PROJECT_NAME}
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib

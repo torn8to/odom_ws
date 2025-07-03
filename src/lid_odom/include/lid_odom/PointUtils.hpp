@@ -12,15 +12,13 @@ namespace cloud {
    * @return The transformed points
    */
   inline std::vector<Eigen::Vector3d> transformPoints(
-      const std::vector<Eigen::Vector3d>& points, 
-      const Sophus::SE3d& transform) {
+      const std::vector<Eigen::Vector3d> &points, 
+      const Sophus::SE3d &transform) {
     std::vector<Eigen::Vector3d> transformed_points;
     transformed_points.reserve(points.size());
     std::transform(points.begin(), points.end(), std::back_inserter(transformed_points),
                    [&transform](const Eigen::Vector3d& point) {
-                       return transform * point;}
-                       );
+                       return transform * point;});
     return transformed_points;
   }
-
 }
