@@ -40,16 +40,6 @@ namespace cloud{
     }
   }
   
-  std::vector<Eigen::Vector3d> VoxelMap::transform_cloud( 
-        const std::vector<Eigen::Vector3d> &points, 
-        const Sophus::SE3d &transform){
-    std::vector<Eigen::Vector3d>  transformed_points;
-    transformed_points.reserve(points.size());
-    for(const Eigen::Vector3d &point: points){
-      transformed_points.emplace_back(transform * point);
-    }
-   return transformed_points;
-  }
 
 
   std::vector<Eigen::Vector3d> VoxelMap::removeFarPoints(const std::vector<Eigen::Vector3d> &cloud){
@@ -92,6 +82,7 @@ std::tuple<Eigen::Vector3d, double> VoxelMap::firstNearestNeighborQuery(const Ei
                         }
                       }
                 });
+   frequencyCache_.update(PointToVoxel(closest_neighbor, voxel_resolution_));
    return std::tuple<Eigen::Vector3d, double>(closest_neighbor, min_distance);
   }
 
