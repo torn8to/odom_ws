@@ -12,20 +12,17 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    # Get the package directories
     pkg_dir = get_package_share_directory('odom_trail_blazer_demos')
     pkg_phasma_dir = get_package_share_directory('phasma_description')
-
-    # URDF file path
+    odom_pkg_dir = get_package_share_directory('lid_odom')
     urdf_file = os.path.join(pkg_phasma_dir, 'urdf', 'phasma.urdf.xacro')
 
-    # Launch arguments
     bag_file = LaunchConfiguration('bag_file')
     use_rviz = LaunchConfiguration('use_rviz')
     use_sim_time = LaunchConfiguration('use_sim_time')
+    lidar_odom_config = LaunchConfiguration('lidar_param_file') 
     rviz_config = LaunchConfiguration('rviz_config')
 
-    # Declare launch arguments
     use_sim_time_arg = DeclareLaunchArgument(
         'use_sim_time',
         default_value='true',
@@ -43,6 +40,12 @@ def generate_launch_description():
         default_value='true',
         description='Whether to start RViz'
     )
+
+    lidar_param_file_arg = DeclareLaunchArgument(
+        'lidar_param_file',
+        default_value=os.path.join(pkg_dir, 'config', 'handheld_odom_lidar.yaml'),
+        description='Path to the lidar odometry parameter file'
+    )
     
     rviz_config_arg = DeclareLaunchArgument(
         'rviz_config',
@@ -50,13 +53,11 @@ def generate_launch_description():
         description='Path to the RViz configuration file'
     )
     
-    # Robot description from URDF
     robot_description = ParameterValue(
         Command(['xacro ', urdf_file]),
         value_type=str
     )
     
-    # Robot state publisher node
     robot_state_publisher_node = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
@@ -67,40 +68,20 @@ def generate_launch_description():
             'use_sim_time': use_sim_time
         }]
     )
-    
-    # Joint state publisher node
-    joint_state_publisher_node = Node(
-        package='joint_state_publisher',
-        executable='joint_state_publisher',
-        name='joint_state_publisher',
-        output='screen',
-        parameters=[{
-            'use_sim_time': use_sim_time
-        }]
-    )
 
     # IMU Odometry Node
     lid_odom_node = Node(
         package='lid_odom',
-        executable='lid_odom_node',
+        executable='loose_lidar_imu_node',
         output='screen',
-        parameters=[{
-            'frame_id': 'odom',
-            'child_frame_id': 'base_link',
-            'imu_frame_id': 'imu_link',
-            'publish_transform': False,
-            'use_sim_time': use_sim_time
-        }]
-    )
+        parameters=[lidar_odom_config])
     
-    # ROS2 Bag playback process
     bag_play_cmd = ExecuteProcess(
         cmd=['ros2', 'bag', 'play', bag_file, '-d', '5.0', '--clock'],
         shell=True,
         condition=IfCondition(PythonExpression(["'", bag_file, "'", ' != ""']))
     )
     
-    # RViz visualization
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
@@ -127,6 +108,7 @@ def generate_launch_description():
         bag_file_arg,
         use_rviz_arg,
         rviz_config_arg,
+        lidar_param_file_arg,
         robot_state_publisher_node,
         joint_state_publisher_node,
         lid_odom_node,

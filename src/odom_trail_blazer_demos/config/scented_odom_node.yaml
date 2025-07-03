@@ -1,0 +1,31 @@
+/lidar_odom_scented:
+  ros__parameters:
+    base_frame: base_link
+    initial_threshold: 2.0
+    lidar_frame: rslidar
+    max_distance: 20.0
+    max_points_per_voxel: 27
+    min_motion_threshod: 0.1
+    odom_frame: lid_odom
+    orientation_covariance: 0.1
+    position_covariance: 0.1
+    publish_tf: true
+    qos_overrides:
+      /parameter_events:
+        publisher:
+          depth: 1000
+          durability: volatile
+          history: keep_last
+          reliability: reliable
+      /tf:
+        publisher:
+          depth: 100
+          durability: volatile
+          history: keep_last
+          reliability: reliable
+    start_type_description_service: true
+    use_sim_time: false
+    voxel_factor: 40.0
+    voxel_resolution_alpha: 1.5
+    voxel_resolution_beta: 0.5
+
