@@ -1,17 +1,17 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/msg/imu.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
-#include <rcl_interfaces/msg/set_parameters_result.hpp>
 
 #include <memory>
 #include <string>
+#include <mutex>
 
 #include <Eigen/Core>
-
 #include <sophus/se3.hpp>
 
 #include "Pipeline.hpp"
@@ -41,6 +41,7 @@ public:
     declare_parameter("child_frame", "base_link");
     declare_parameter("lidar_frame", "rslidar");
     declare_parameter("base_frame", "base_link");
+    declare_parameter("imu_frame", "imu_link");
     declare_parameter("imu_integration_enabled", false);
     declare_parameter("position_covariance", 0.1);
     declare_parameter("orientation_covariance", 0.1);
@@ -58,6 +59,7 @@ public:
     child_frame_id_ = get_parameter("child_frame").as_string();
     base_frame_id_ = get_parameter("base_frame").as_string();
     lidar_link_id_ = get_parameter("lidar_frame").as_string();
+    imu_frame_id_ = get_parameter("imu_frame").as_string();
     publish_transform_ = get_parameter("publish_transform").as_bool();
     debug_ = get_parameter("debug").as_bool();
 
@@ -68,13 +70,29 @@ public:
     tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
     tf_listener_ = std::make_unique<tf2_ros::TransformListener>(buffer_);
     
+    // Create a mutually exclusive callback group for IMU to seperate from default
+    imu_callback_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    
+    imu_subscription_options_ = rclcpp::SubscriptionOptions();
+    imu_subscription_options_.callback_group = imu_callback_group_;
+    
     point_cloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
       "points", 10, 
       std::bind(&LidarOdometryNode::pointCloudCallback, this, std::placeholders::_1));
 
+    imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
+      "imu", 10, 
+      std::bind(&LidarOdometryNode::imuCallback, this, std::placeholders::_1),
+      imu_subscription_options_);
+
     odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("lid_odom", 10);
     map_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("voxel_map", 10);
     cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("cloud", 10);
+    
+    // Initialize flags
+    lidar_pose_acquired = false;
+    imu_pose_acquired = false;
+    
     RCLCPP_INFO(get_logger(),"Lidar Odometry Node initialized");
   }
 
@@ -110,6 +128,30 @@ private:
       this->publishDebug(std::get<1>(result));
     }
   }
+
+
+  void imuCallback(const sensor_msgs::msg::Imu::SharedPtr msg){
+    if(!imu_pose_acquired){
+      RCLCPP_WARN(get_logger(), "Lidar pose not acquired trying to reacquire");
+      try{
+        geometry_msgs::msg::TransformStamped transform_stamped = buffer_.lookupTransform(lidar_link_id_,
+                                                           base_frame_id_, tf2::TimePointZero);
+        imu_pose_rel_to_base_ = tf2::transformToSophus(transform_stamped);
+        imu_pose_acquired = true;
+      }
+      catch(const std::exception & e){
+        RCLCPP_ERROR(get_logger(), "Failed to lookup transform from %s to %s: %s", base_frame_id_.c_str(), lidar_link_id_.c_str(), e.what());\
+        return;
+      }
+
+  }
+
+  void integrateImu(const sensor_msgs::msg::Imu::SharedPtr msg ){
+
+
+  }
+
+
 
   void publishDebug(const std::vector<Eigen::Vector3d> &cloud)
   {
@@ -174,9 +216,23 @@ private:
 
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr point_cloud_sub_;
+  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr point_cloud_sub_;
+
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
+
+
+  rclcpp::CallbackGroup::SharedPtr imu_callback_group_;
+  rclcpp::SubscriptionOptions imu_subscription_options_;
+
+
+
+  std::vector<std::pair<Sophus::SE3d, double>> imu_pose_diff_queue
+  std::mutex pose_mutex;
+
+  Eigen::Vector3d linear_velocity_;
+  Eigen::Vector3d angular_velocity_;
   
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   tf2_ros::Buffer buffer_;
@@ -188,13 +244,16 @@ private:
 
   
   Sophus::SE3d lidar_pose_rel_to_base_;
+  Sophus::SE3d imu_pose_rel_to_base_;
 
   std::string odom_frame_id_;
   std::string child_frame_id_;
   std::string lidar_link_id_;
+  std::string imu_frame_id_;
   std::string base_frame_id_;
 
 
+  bool imu_pose_acquired;
   bool lidar_pose_acquired;
   bool publish_transform_;
   bool debug_;
