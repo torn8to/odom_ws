@@ -17,6 +17,7 @@
 #include "Pipeline.hpp"
 #include "Convert.hpp"
 #include "tf2_sophus.hpp"
+#include "MotionCompensation.hpp"
 
 namespace lid_odom {
 
@@ -103,8 +104,10 @@ private:
 
   void pointCloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
   {
-    rclcpp::Time current_time =  msg->header.stamp;
+    // set pose biasses
     std::vector<Eigen::Vector3d> points = cloud::convertMsgToCloud(msg);
+    std::vector<double> timestamps = cloud::extractTimestampsFromCloudMsg(msg);
+
     if(!lidar_pose_acquired){
       RCLCPP_WARN(get_logger(), "Lidar pose not acquired trying to reacquire");
       try{
@@ -122,11 +125,10 @@ private:
       RCLCPP_WARN(get_logger(), "Received empty point cloud, skipping");
       return;
     }
-    // LIdar motioncompenstation
+
     Sophus::SE3d diff_from_last_pose = interweaved_pose_ * last_lidar_pose_.inverse();
-
-
-    std::vector<Eigen::Vector3d>transformed_points = transformPointCloud(points, lidar_pose_rel_to_base_);
+    std::vector<Eigen::Vector3d> transformed_points = transformPointCloud(points, lidar_pose_rel_to_base_);
+    std::vector<Eigen::Vector3d> unskewed_points = cloud::motionDeSkew(transformed_points, timestamps, diff_from_last_pose);
     std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> result = pipeline_->odometryUpdate(transformed_points);
     Sophus::SE3d updated_pose = std::get<0>(result);
     pipeline_->updatePosition(updated_pose);
@@ -136,10 +138,7 @@ private:
       this->publishDebug(std::get<1>(result));
     }
 
-    // set velocity to the current lidar_pose to reduce
-    auto dt = (current_time - last_lidar_time_).seconds();
-    linear_velocity_ = (updated_pose.translation()-last_lidar_pose_.translation())/dt;
-    current_time = last_lidar_time_;
+    // reset the imu velocity to the Lidar values
   }
 
 
@@ -156,15 +155,14 @@ private:
         RCLCPP_ERROR(get_logger(), "Failed to lookup transform from %s to %s: %s", base_frame_id_.c_str(), lidar_link_id_.c_str(), e.what());\
         return;
       }
+    }
     if(!has_first_imu_message){
       last_time_ = msg->header.stamp;
       return;
     }
-    
-    
     integrateImu(msg);
   }
-}
+
 
   void integrateImu(const sensor_msgs::msg::Imu::SharedPtr msg){
     rclcpp::Time current_time = msg->header.stamp;
@@ -190,12 +188,11 @@ private:
     angular_velocity_ = processed_angular_velocity;
     Sophus::SO3d delta_half_rotation = Sophus::SO3d::exp(delta_angle / 2.0);
     imu_global_pose.so3() = imu_global_pose.so3() * delta_half_rotation;
-    Eigen::Vector3d linear_velocity_delta = dt * (processed_angular_velocity);
+    Eigen::Vector3d linear_velocity_delta = dt * (processed_acceleration);
     imu_global_pose.translation() = (imu_global_pose.translation() + (imu_global_pose.rotationMatrix() * (dt * (linear_velocity_ + linear_velocity_delta/2.0))));
     linear_velocity_ += linear_velocity_delta;
     imu_global_pose.so3() = imu_global_pose.so3() * delta_half_rotation;
     last_time_ = current_time;
-
     publishOdometry(msg->header.stamp, interweaved_pose_);
   }
 
@@ -286,18 +283,16 @@ private:
   tf2_ros::Buffer buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
   float position_covariance_, orientation_covariance_;
-
+;
   cloud::PipelineConfig config;
   std::unique_ptr<cloud::Pipeline> pipeline_;
 
   rclcpp::Time last_time_;  
-  rclcpp::Time last_lidar_time_;
   Sophus::SE3d lidar_pose_rel_to_base_;
   Sophus::SE3d imu_pose_rel_to_base_;
 
   Sophus::SE3d interweaved_pose_; // latest fused pose between imu and lidar_data
   Sophus::SE3d last_lidar_pose_;
-
 
   std::string odom_frame_id_;
   std::string child_frame_id_;
@@ -313,7 +308,7 @@ private:
   
 };
 
-}// namespace lid_odom
+} // namespace lid_odom
 
 
 int main(int argc, char * argv[])
