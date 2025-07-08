@@ -19,7 +19,7 @@ struct PipelineConfig {
   bool imu_integration_enabled = false;
   int max_points_per_voxel = 27;
   int num_threads = 8;
-  int num_iterations = 500;
+  int num_iterations = 100;
   double convergence = 1e-4;
   bool odom_downsample = true;
   double initial_threshold = 0.5;
