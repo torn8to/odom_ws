@@ -48,6 +48,7 @@ public:
     declare_parameter("orientation_covariance", 0.1);
     declare_parameter("linear_acceleration_bias", std::vector<double>{0.0, 0.0, 0.0});
     declare_parameter("angular_velocity_bias", std::vector<double>{0.0, 0.0, 0.0});
+    declare_parameter("lfu_prune_interval", 10);
     // Get parameters
     config.max_distance = get_parameter("max_distance").as_double();
     config.voxel_factor = get_parameter("voxel_factor").as_double();
@@ -56,6 +57,7 @@ public:
     config.max_points_per_voxel = get_parameter("max_points_per_voxel").as_int();
     config.imu_integration_enabled = get_parameter("imu_integration_enabled").as_bool();
     config.odom_downsample = get_parameter("odom_downsample").as_bool();
+    config.lfu_prune_interval = get_parameter("lfu_prune_interval").as_int();
 
     odom_frame_id_ = get_parameter("map_frame").as_string();
     child_frame_id_ = get_parameter("child_frame").as_string();

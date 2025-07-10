@@ -24,6 +24,7 @@ struct PipelineConfig {
   bool odom_downsample = true;
   double initial_threshold = 0.5;
   double min_motion_threshold =  0.1;
+  int lfu_prune_interval = 1;
 };
 
 class Pipeline {
@@ -63,10 +64,12 @@ public:
    */
   void addToMap(const std::vector<Eigen::Vector3d> &points);
 
+
   /**
-   * @brief prunes points further then the max_distnace stored in the cloud 
-   * @param points a point cloud
-   * @param pouint the point relative to which points are being removed
+   * @brief Removes points that are far from a given location
+   * @param cloud The point cloud to filter
+   * @param point The reference point
+   * @return The filtered point cloud
    */
   std::vector<Eigen::Vector3d> removePointsFarFromLocation(const std::vector<Eigen::Vector3d> &cloud,
                                                             const Eigen::Vector3d &point);
@@ -103,14 +106,14 @@ std::vector<Eigen::Vector3d> removeFarPoints(std::vector<Eigen::Vector3d> &cloud
   }
 
   /**
-   * @brief Gets the current position transformation
-   * @return The current position transformation matrix
+   * @brief Gets the current position
+   * @return The current position
    */
   Sophus::SE3d position() const;
 
   /**
-   * @brief Sets the current position
-   * @param transformation_matrix The transformation matrix to set as current position
+   * @brief Updates the current position
+   * @param transformation_matrix The new position
    */
   void updatePosition(const Sophus::SE3d transformation_matrix);
 
@@ -121,12 +124,14 @@ private:
   AdaptiveThreshold threshold;
   double voxel_factor_;
   double max_distance_;
-  double voxel_resolution_alpha_; // voxel resolution for the alpha layer
-  double voxel_resolution_beta_; // voxel resolution for the beta layer
+  double voxel_resolution_alpha_;
+  double voxel_resolution_beta_;
   bool imu_integration_enabled_;
   int max_points_per_voxel_;
   bool odom_voxel_downsample_;
-  cloud::VoxelMap voxel_map_;
+  VoxelMap voxel_map_;
+  int lfu_prune_counter_; // Counter to track when to prune via LFU
+  int lfu_prune_interval_; // Interval for LFU pruning
 };
 
 } // namespace cloud

@@ -17,7 +17,9 @@ Pipeline::Pipeline(const PipelineConfig &config)
     voxel_map_((config.max_distance/config.voxel_factor) * config.voxel_resolution_alpha,
     config.max_distance ,
     config.max_points_per_voxel),
-    threshold(config.initial_threshold, config.min_motion_threshold, config.max_distance){}
+    threshold(config.initial_threshold, config.min_motion_threshold, config.max_distance),
+    lfu_prune_counter_(0),
+    lfu_prune_interval_(config.lfu_prune_interval){}
 
 Pipeline::~Pipeline() {
   // Cleanup if needed
@@ -45,6 +47,12 @@ std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> Pipeline::odometryUpdate(
 
   const double sigma = threshold.computeThreshold();
 
+  // Update LFU cache with voxels used for alignment
+  for (const auto& point : cloud_voxel_odom) {
+    const Voxel voxel = PointToVoxel(point, max_distance_ / voxel_factor_ * voxel_resolution_beta_);
+    voxel_map_.lfuUpdate(voxel);
+  }
+
   Sophus::SE3d new_position = registration_.alignPointsToMap(
     cloud_voxel_odom,
     voxel_map_,
@@ -56,7 +64,15 @@ std::tuple<Sophus::SE3d, std::vector<Eigen::Vector3d>> Pipeline::odometryUpdate(
   
   threshold.updateModelDeviation(pose_diff_);
   std::vector<Eigen::Vector3d> cloud_voxel_mapping_transformed = voxel_map_.transform_cloud(cloud_voxel_mapping, new_position);
+  
   voxel_map_.addPoints(cloud_voxel_mapping_transformed);
+  
+  // Periodically prune the map using LFU cache information
+  if (++lfu_prune_counter_ >= lfu_prune_interval_) {
+    voxel_map_.pruneViaLfu();
+    lfu_prune_counter_ = 0;
+  }
+  
   updatePosition(new_position);
   return std::make_tuple(new_position, cloud_voxel_mapping);
 }
@@ -75,8 +91,12 @@ std::vector<Eigen::Vector3d> Pipeline::removePointsFarFromLocation(const std::ve
   }
 
 void Pipeline::addToMap(const std::vector<Eigen::Vector3d> &points) {
-  // Add points to the global map
-  voxel_map_.addPoints(points);
+  std::for_each(points.begin(), transformed_points.end(), [&](const auto& point) {
+    const Voxel voxel = PointToVoxel(point, max_distance_ / voxel_factor_ * voxel_resolution_alpha_);
+    voxel_map_.lfuUpdate(voxel);
+  });
+  
+  voxel_map_.addPoints(transformed_points);
 }
 
 

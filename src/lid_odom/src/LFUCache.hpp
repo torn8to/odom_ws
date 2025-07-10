@@ -12,7 +12,7 @@ namespace cloud{
     public:
       LFUCache(int max_size):
         max_size_(max_size),
-        cache_map_(max_size*3),
+        cache_map_(max_size),
         cache_list_(max_size){}
 
       inline void put(const Voxel& key){
@@ -24,7 +24,7 @@ namespace cloud{
         } else{
           cache_map_.emplace(key,1);
         }
-        if (cache_list_.size() >= max_size_){
+        if (cache_list_.size() > max_size_){
           auto last =  cache_list_.end();
           last--;
           auto map_it = cache_map_.find(*last);
@@ -47,7 +47,7 @@ namespace cloud{
         cache_map_.clear();
       }
     private:
-      int max_size_;
+      size_t max_size_;
       std::list<Voxel> cache_list_;
       std::unordered_map<Voxel,int> cache_map_;
 };
